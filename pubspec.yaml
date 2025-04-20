@@ -1,0 +1,50 @@
+name: commerce_connect
+description: Application mobile pour mettre en relation les petits commerces et les clients potentiels.
+
+publish_to: 'none' # Ne pas publier sur pub.dev
+
+version: 1.0.0+1
+
+environment:
+  sdk: ">=2.17.0 <3.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  
+  # Interface
+  cupertino_icons: ^1.0.2
+  
+  # Supabase
+  supabase_flutter: ^2.8.4
+  
+  # Cartes et localisation
+  geolocator: ^14.0.0
+  google_maps_flutter: ^2.5.0  
+  # Utilitaires
+  url_launcher: ^6.1.0
+  intl: ^0.20.2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+
+flutter:
+  uses-material-design: true
+  
+  assets:
+    - assets/images/
+    - assets/icons/
+    - assets/fonts/Poppins-Regular.ttf
+    - assets/fonts/Poppins-Bold.ttf
+    - assets/fonts/Poppins-Light.ttf
+    
+  fonts:
+    - family: Poppins
+      fonts:
+        - asset: assets/fonts/Poppins-Regular.ttf
+        - asset: assets/fonts/Poppins-Bold.ttf
+          weight: 700
+        - asset: assets/fonts/Poppins-Light.ttf
+          weight: 300
