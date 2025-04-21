@@ -19,7 +19,7 @@ ${business.isOpenNow() ? 'Ouvert' : 'Fermé'} - Horaires: ${business.openingTime
 ${business.address.isNotEmpty ? 'Adresse: ${business.address}' : ''}
 ${business.description.isNotEmpty ? '\n${business.description}' : ''}
 
-Découvrez ce commerce sur Commerce Connect!
+Découvrez ce commerce sur Warap!
 """;
 
     Share.share(message, subject: 'Découvrez ${business.name}');
