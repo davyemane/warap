@@ -12,6 +12,7 @@ class BusinessModel {
   final String address;
   final String phone;
   final DateTime createdAt;
+  final DateTime? updatedAt; // Ajout de l'attribut updatedAt comme nullable
 
   BusinessModel({
     required this.id,
@@ -26,6 +27,7 @@ class BusinessModel {
     required this.address,
     required this.phone,
     required this.createdAt,
+    this.updatedAt, // Paramètre optionnel
   });
 
   factory BusinessModel.fromJson(Map<String, dynamic> json) {
@@ -42,6 +44,9 @@ class BusinessModel {
       address: json['address'] ?? '',
       phone: json['phone'] ?? '',
       createdAt: DateTime.parse(json['created_at']),
+      updatedAt: json['updated_at'] != null 
+          ? DateTime.parse(json['updated_at']) 
+          : null, // Parsing de updated_at s'il existe
     );
   }
 
@@ -59,10 +64,11 @@ class BusinessModel {
       'address': address,
       'phone': phone,
       'created_at': createdAt.toIso8601String(),
+      'updated_at': updatedAt?.toIso8601String(), // Conversion optionnelle
     };
   }
 
-  // Vérifier si le commerce est ouvert actuellement
+  // Les autres méthodes restent inchangées
   bool isOpenNow() {
     final now = DateTime.now();
     final currentTime = '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';

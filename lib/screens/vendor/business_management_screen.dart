@@ -8,7 +8,12 @@ import 'add_business_screen.dart';
 import 'edit_business_screen.dart';
 
 class BusinessManagementScreen extends StatefulWidget {
-  const BusinessManagementScreen({Key? key}) : super(key: key);
+  final bool showAppBar;
+  
+  const BusinessManagementScreen({
+    Key? key, 
+    this.showAppBar = true
+  }) : super(key: key);
 
   @override
   State<BusinessManagementScreen> createState() => _BusinessManagementScreenState();
@@ -19,7 +24,7 @@ class _BusinessManagementScreenState extends State<BusinessManagementScreen> {
   final AuthService _authService = AuthService();
   List<BusinessModel> _businesses = [];
   bool _isLoading = true;
-
+  
   @override
   void initState() {
     super.initState();
@@ -77,15 +82,17 @@ class _BusinessManagementScreenState extends State<BusinessManagementScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Mes Commerces'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.exit_to_app),
-            onPressed: _signOut,
-          ),
-        ],
-      ),
+      appBar: widget.showAppBar
+          ? AppBar(
+              title: const Text('Mes Commerces'),
+              actions: [
+                IconButton(
+                  icon: const Icon(Icons.exit_to_app),
+                  onPressed: _signOut,
+                ),
+              ],
+            )
+          : null,
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _businesses.isEmpty

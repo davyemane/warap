@@ -1,27 +1,38 @@
 // Fichier main.dart
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'config/supabase_config.dart';
-import 'config/constants.dart';
+import 'config/app_theme.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/auth/register_screen.dart';
 import 'screens/client/map_screen.dart';
-import 'screens/client/business_details_screen.dart';
-import 'screens/client/filter_screen.dart';
 import 'screens/vendor/business_management_screen.dart';
-import 'screens/vendor/add_business_screen.dart';
-import 'screens/vendor/edit_business_screen.dart';
+import 'screens/client/client_main_screen.dart';
+import 'screens/vendor/vendor_main_screen.dart';
 import 'services/auth_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
+
+  // Définir l'orientation de l'application (portrait uniquement)
+  await SystemChrome.setPreferredOrientations([
+    DeviceOrientation.portraitUp,
+    DeviceOrientation.portraitDown,
+  ]);
+
+  // Définir le style de la barre d'état
+  SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
+    statusBarColor: Colors.transparent,
+    statusBarIconBrightness: Brightness.light,
+  ));
+
   // Initialisation de Supabase
   await Supabase.initialize(
     url: SupabaseConfig.url,
     anonKey: SupabaseConfig.anonKey,
   );
-  
+
   runApp(const MyApp());
 }
 
@@ -31,18 +42,17 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: AppConstants.appName,
-      theme: ThemeData(
-        primarySwatch: Colors.blue,
-        visualDensity: VisualDensity.adaptivePlatformDensity,
-      ),
-      initialRoute: '/',
+      title: 'Warap',
+      debugShowCheckedModeBanner: false, // Supprimer le bandeau "Debug"
+      theme: AppTheme.lightTheme(), // Utiliser notre thème personnalisé
+      home: const SplashScreen(),
       routes: {
-        '/': (context) => const SplashScreen(),
         '/login': (context) => const LoginScreen(),
         '/register': (context) => const RegisterScreen(),
+        '/client': (context) => const ClientMainScreen(),
         '/client/map': (context) => const ClientMapScreen(),
-        '/vendor/businesses': (context) => const BusinessManagementScreen(),
+        '/vendor': (context) => const VendorMainScreen(),
+        '/vendor/businesses': (context) =>const BusinessManagementScreen(), 
       },
     );
   }
@@ -55,70 +65,138 @@ class SplashScreen extends StatefulWidget {
   State<SplashScreen> createState() => _SplashScreenState();
 }
 
-class _SplashScreenState extends State<SplashScreen> {
+class _SplashScreenState extends State<SplashScreen>
+    with SingleTickerProviderStateMixin {
   final AuthService _authService = AuthService();
-  
+  late AnimationController _animationController;
+  late Animation<double> _fadeAnimation;
+
   @override
   void initState() {
     super.initState();
-    _checkAuth();
+
+    // Configuration de l'animation
+    _animationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1500),
+    );
+
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _animationController,
+        curve: Curves.easeIn,
+      ),
+    );
+
+    // Démarrer l'animation
+    _animationController.forward();
+
+    // Vérifier l'authentification après un court délai
+    Future.delayed(const Duration(seconds: 2), () {
+      _checkAuthentication();
+    });
   }
-  
-  Future<void> _checkAuth() async {
-    // Simuler un délai pour l'écran de démarrage
-    await Future.delayed(const Duration(seconds: 2));
-    
-    final isAuthenticated = await _authService.isAuthenticated();
-    
-    if (isAuthenticated) {
-      final userType = await _authService.getUserType();
-      
-      if (userType == 'client') {
-        Navigator.pushReplacementNamed(context, '/client/map');
+
+  @override
+  void dispose() {
+    _animationController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _checkAuthentication() async {
+    try {
+      final isAuthenticated = await _authService.isAuthenticated();
+
+      if (isAuthenticated) {
+        final userType = await _authService.getUserType();
+
+        if (!mounted) return;
+
+        if (userType == 'client') {
+          Navigator.of(context).pushReplacementNamed('/client');
+        } else {
+          Navigator.of(context).pushReplacementNamed('/vendor');
+        }
       } else {
-        Navigator.pushReplacementNamed(context, '/vendor/businesses');
+        if (!mounted) return;
+        Navigator.of(context).pushReplacementNamed('/login');
       }
-    } else {
-      Navigator.pushReplacementNamed(context, '/login');
+    } catch (e) {
+      if (!mounted) return;
+      Navigator.of(context).pushReplacementNamed('/login');
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            // Logo ou icône de l'application
-            const Icon(
-              Icons.store,
-              size: 100,
-              color: Colors.blue,
-            ),
-            const SizedBox(height: 24),
-            // Nom de l'application
-            Text(
-              AppConstants.appName,
-              style: const TextStyle(
-                fontSize: 28,
-                fontWeight: FontWeight.bold,
+      body: Container(
+        width: double.infinity,
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              AppTheme.primaryColor,
+              AppTheme.primaryColor.withOpacity(0.8),
+            ],
+          ),
+        ),
+        child: FadeTransition(
+          opacity: _fadeAnimation,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              // Logo de l'application
+              Container(
+                width: 120,
+                height: 120,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(60),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.2),
+                      blurRadius: 10,
+                      offset: const Offset(0, 5),
+                    ),
+                  ],
+                ),
+                child: const Center(
+                  child: Icon(
+                    Icons.store,
+                    size: 70,
+                    color: AppTheme.primaryColor,
+                  ),
+                ),
               ),
-            ),
-            const SizedBox(height: 8),
-            // Slogan ou description
-            Text(
-              AppConstants.appTagline,
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: 16,
-                color: Colors.grey,
+              const SizedBox(height: 24),
+              // Nom de l'application
+              const Text(
+                'Commerce Connect',
+                style: TextStyle(
+                  fontSize: 32,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
               ),
-            ),
-            const SizedBox(height: 48),
-            // Indicateur de chargement
-            const CircularProgressIndicator(),
-          ],
+              const SizedBox(height: 8),
+              // Slogan
+              const Text(
+                'Connectez-vous aux commerces près de chez vous',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 16,
+                  color: Colors.white,
+                ),
+              ),
+              const SizedBox(height: 48),
+              // Indicateur de chargement
+              const CircularProgressIndicator(
+                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+              ),
+            ],
+          ),
         ),
       ),
     );

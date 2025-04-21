@@ -1,7 +1,7 @@
-name: commerce_connect
+name: warap
 description: Application mobile pour mettre en relation les petits commerces et les clients potentiels.
 
-publish_to: 'none' # Ne pas publier sur pub.dev
+publish_to: "none" # Ne pas publier sur pub.dev
 
 version: 1.0.0+1
 
@@ -11,19 +11,22 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  
+
   # Interface
   cupertino_icons: ^1.0.2
-  
+  flutter_launcher_icons: ^0.13.1
+
   # Supabase
   supabase_flutter: ^2.8.4
-  
+  share_plus: ^4.0.0
   # Cartes et localisation
   geolocator: ^14.0.0
-  google_maps_flutter: ^2.5.0  
+  google_maps_flutter: ^2.5.0
   # Utilitaires
   url_launcher: ^6.1.0
   intl: ^0.20.2
+  image_picker: ^1.1.2
+  fl_chart: ^0.71.0
 
 dev_dependencies:
   flutter_test:
@@ -32,14 +35,18 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
-  
+
   assets:
     - assets/images/
-    - assets/icons/
+    - assets/icons/store_open.png
+    - assets/icons/mobile_open.png
+    - assets/icons/store_closed.png
+    - assets/logo/warap_logo.png
+    - assets/icons/mobile_closed.png
     - assets/fonts/Poppins-Regular.ttf
     - assets/fonts/Poppins-Bold.ttf
     - assets/fonts/Poppins-Light.ttf
-    
+
   fonts:
     - family: Poppins
       fonts:
@@ -48,3 +55,8 @@ flutter:
           weight: 700
         - asset: assets/fonts/Poppins-Light.ttf
           weight: 300
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/logo/warap_logo.png"

@@ -1,6 +1,9 @@
-// Fichier services/auth_service.dart
+
+// Fichier services/auth_service.dart - méthodes mises à jour
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/user_model.dart';
+import 'dart:typed_data'; // Ajoutez cette importation
+
 
 class AuthService {
   final SupabaseClient _supabaseClient = Supabase.instance.client;
@@ -8,40 +11,38 @@ class AuthService {
   // Vérifier si l'utilisateur est authentifié
   Future<bool> isAuthenticated() async {
     return _supabaseClient.auth.currentUser != null;
-  }
-
-  // Obtenir le type d'utilisateur (client ou vendeur)
+  } 
   Future<String> getUserType() async {
-    try {
-      final user = _supabaseClient.auth.currentUser;
-      if (user == null) {
-        throw Exception('User not authenticated');
-      }
+  try {
+    final user = _supabaseClient.auth.currentUser;
+    if (user == null) {
+      throw Exception('User not authenticated');
+    }
 
-      final response = await _supabaseClient
-          .from('users')
-          .select('user_type')
-          .eq('id', user.id)
-          .maybeSingle();
+    final response = await _supabaseClient
+      .from('users')
+      .select('user_type')
+      .eq('id', user.id)
+      .maybeSingle();
 
-      if (response == null) {
-        print('Données utilisateur non trouvées, retour au type par défaut');
-        return 'client';
-      }
-      
-      return response['user_type'] ?? 'client'; // Default to client if null
-    } catch (e) {
-      print('Erreur lors de la récupération du type d\'utilisateur: $e');
-      // Fallback à client par défaut en cas d'erreur
+    if (response == null) {
+      print('Données utilisateur non trouvées, retour au type par défaut');
       return 'client';
     }
+    
+    return response['user_type'] ?? 'client'; // Valeur par défaut si null
+  } catch (e) {
+    print('Erreur lors de la récupération du type d\'utilisateur: $e');
+    // Fallback à client par défaut en cas d'erreur
+    return 'client';
   }
-
-  // S'inscrire en tant que nouveau utilisateur
+}
+   // Méthode d'inscription qui prend maintenant en compte le nom
   Future<UserModel> signUp({
     required String email,
     required String password,
     required String userType,
+    String name = '', // Paramètre optionnel pour le nom
   }) async {
     try {
       print('Tentative d\'inscription pour: $email, type: $userType');
@@ -60,12 +61,13 @@ class AuthService {
       final userId = authResponse.user!.id;
       print('Authentification réussie, ID utilisateur: $userId');
 
-      // 2. Ajouter l'utilisateur à la table users avec son type
+      // 2. Ajouter l'utilisateur à la table users avec son type et son nom
       try {
         await _supabaseClient.from('users').insert({
           'id': userId,
           'email': email,
           'user_type': userType,
+          'name': name, // Ajout du nom
           'created_at': DateTime.now().toIso8601String(),
           'updated_at': DateTime.now().toIso8601String(),
         });
@@ -75,10 +77,9 @@ class AuthService {
         throw Exception('Failed to store user data: $e');
       }
 
-      // 3. Attendre un court délai pour la propagation des données
+      // Reste de la méthode inchangée...
       await Future.delayed(const Duration(milliseconds: 500));
 
-      // 4. Récupérer les informations complètes de l'utilisateur avec une approche plus robuste
       try {
         final response = await _supabaseClient
             .from('users')
@@ -89,11 +90,11 @@ class AuthService {
         if (response == null) {
           print('Aucune donnée utilisateur trouvée après l\'insertion');
           
-          // 5. Si aucune donnée n'est trouvée, créer un modèle utilisateur avec les informations disponibles
           return UserModel(
             id: userId,
             email: email,
             userType: userType,
+            name: name, // Inclure le nom
             createdAt: DateTime.now(),
           );
         }
@@ -103,11 +104,11 @@ class AuthService {
       } catch (e) {
         print('Erreur lors de la récupération des données: $e');
         
-        // 6. En cas d'erreur, retourner également un modèle utilisateur avec les informations disponibles
         return UserModel(
           id: userId,
           email: email,
           userType: userType,
+          name: name, // Inclure le nom
           createdAt: DateTime.now(),
         );
       }
@@ -117,6 +118,7 @@ class AuthService {
     }
   }
 
+ 
   // Se connecter avec un compte existant
   Future<UserModel> signIn({
     required String email,
@@ -268,4 +270,77 @@ Future<void> resendConfirmationEmail(String email) async {
       throw Exception('Failed to update user type: $e');
     }
   }
-}
+
+    // Méthode pour mettre à jour le profil utilisateur
+  Future<UserModel> updateUserProfile({
+    required String userId,
+    String? name,
+    String? profileImageUrl,
+  }) async {
+    try {
+      // Préparer les données à mettre à jour
+      final Map<String, dynamic> updates = {
+        'updated_at': DateTime.now().toIso8601String(),
+      };
+      
+      if (name != null) {
+        updates['name'] = name;
+      }
+      
+      if (profileImageUrl != null) {
+        updates['profile_image_url'] = profileImageUrl;
+      }
+      
+      // Mettre à jour le profil
+      await _supabaseClient
+          .from('users')
+          .update(updates)
+          .eq('id', userId);
+      
+      // Récupérer le profil mis à jour
+      final response = await _supabaseClient
+          .from('users')
+          .select()
+          .eq('id', userId)
+          .maybeSingle();
+      
+      if (response == null) {
+        throw Exception('User not found after update');
+      }
+      
+      return UserModel.fromJson(response);
+    } catch (e) {
+      print('Erreur lors de la mise à jour du profil: $e');
+      throw Exception('Failed to update user profile: $e');
+    }
+  }
+
+    // Méthode pour télécharger une image de profil
+Future<String> uploadProfileImage(String userId, List<int> fileBytes, String fileName) async {
+  try {
+    // Créer un nom de fichier unique
+    final extension = fileName.split('.').last;
+    final storagePath = 'profile_images/$userId.$extension';
+    final Uint8List bytes = Uint8List.fromList(fileBytes);
+
+    // Télécharger le fichier
+    await _supabaseClient
+        .storage
+        .from('profiles')
+        .uploadBinary(
+          storagePath,
+          bytes,
+          fileOptions: const FileOptions(contentType: 'image/jpeg'),
+        );    
+    // Obtenir l'URL publique
+    final imageUrl = _supabaseClient
+        .storage
+        .from('profiles')
+        .getPublicUrl(storagePath);
+    
+    return imageUrl;
+  } catch (e) {
+    print('Erreur lors du téléchargement de l\'image: $e');
+    throw Exception('Failed to upload profile image: $e');
+  }
+}}
