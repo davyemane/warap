@@ -8,7 +8,9 @@ import '../../models/user_model.dart';
 import '../../services/business_service.dart';
 import '../../services/location_service.dart';
 import '../../services/auth_service.dart';
+import '../../services/error_handler.dart'; // Ajout de l'import
 import '../../widgets/common/custom_app_bar.dart';
+import '../../l10n/translations.dart';
 import 'business_details_screen.dart';
 import 'filter_screen.dart';
 
@@ -71,40 +73,57 @@ class _ClientMapScreenState extends State<ClientMapScreen> {
       setState(() {
         _isUserLoading = false;
       });
-      print('Erreur lors du chargement des données utilisateur: $e');
+      if (mounted) {
+        ErrorHandler.showErrorSnackBar(
+          context, 
+          e,
+          fallbackMessage: AppTranslations.text(context, 'error_loading_user_data'),
+          onRetry: _loadUserData,
+        );
+      }
     }
   }
 
   // Charger les icônes personnalisées pour les marqueurs
   Future<void> _loadCustomMarkerIcons() async {
-    _fixedBusinessIcon = await BitmapDescriptor.fromAssetImage(
-      const ImageConfiguration(size: Size(48, 48)),
-      'assets/icons/store_open.png',
-    ).catchError((error) {
-      // Fallback à l'icône par défaut si l'asset n'est pas trouvé
-      return BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue);
-    });
-    
-    _mobileBusinessIcon = await BitmapDescriptor.fromAssetImage(
-      const ImageConfiguration(size: Size(48, 48)),
-      'assets/icons/mobile_open.png',
-    ).catchError((error) {
-      return BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen);
-    });
-    
-    _fixedClosedBusinessIcon = await BitmapDescriptor.fromAssetImage(
-      const ImageConfiguration(size: Size(48, 48)),
-      'assets/icons/store_closed.png',
-    ).catchError((error) {
-      return BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed);
-    });
-    
-    _mobileClosedBusinessIcon = await BitmapDescriptor.fromAssetImage(
-      const ImageConfiguration(size: Size(48, 48)),
-      'assets/icons/mobile_closed.png',
-    ).catchError((error) {
-      return BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueOrange);
-    });
+    try {
+      _fixedBusinessIcon = await BitmapDescriptor.fromAssetImage(
+        const ImageConfiguration(size: Size(48, 48)),
+        'assets/icons/store_open.png',
+      ).catchError((error) {
+        // Fallback à l'icône par défaut si l'asset n'est pas trouvé
+        return BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue);
+      });
+      
+      _mobileBusinessIcon = await BitmapDescriptor.fromAssetImage(
+        const ImageConfiguration(size: Size(48, 48)),
+        'assets/icons/mobile_open.png',
+      ).catchError((error) {
+        return BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen);
+      });
+      
+      _fixedClosedBusinessIcon = await BitmapDescriptor.fromAssetImage(
+        const ImageConfiguration(size: Size(48, 48)),
+        'assets/icons/store_closed.png',
+      ).catchError((error) {
+        return BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed);
+      });
+      
+      _mobileClosedBusinessIcon = await BitmapDescriptor.fromAssetImage(
+        const ImageConfiguration(size: Size(48, 48)),
+        'assets/icons/mobile_closed.png',
+      ).catchError((error) {
+        return BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueOrange);
+      });
+    } catch (e) {
+      if (mounted) {
+        ErrorHandler.showErrorSnackBar(
+          context, 
+          e,
+          fallbackMessage: AppTranslations.text(context, 'error_loading_icons'),
+        );
+      }
+    }
   }
 
   // Charger les commerces depuis Supabase
@@ -124,7 +143,14 @@ class _ClientMapScreenState extends State<ClientMapScreen> {
       setState(() {
         _isLoading = false;
       });
-      _showErrorSnackBar('Erreur lors du chargement des commerces');
+      if (mounted) {
+        ErrorHandler.showErrorSnackBar(
+          context, 
+          e,
+          fallbackMessage: AppTranslations.text(context, 'error_loading_businesses'),
+          onRetry: _loadBusinesses,
+        );
+      }
     }
   }
 
@@ -143,65 +169,96 @@ class _ClientMapScreenState extends State<ClientMapScreen> {
       
       controller.animateCamera(CameraUpdate.newCameraPosition(_initialCameraPosition));
     } catch (e) {
-      _showErrorSnackBar('Impossible d\'obtenir votre position actuelle');
+      if (mounted) {
+        ErrorHandler.showErrorSnackBar(
+          context, 
+          e,
+          fallbackMessage: AppTranslations.text(context, 'error_location'),
+          onRetry: _getCurrentLocation,
+        );
+      }
     }
   }
 
   // Appliquer les filtres
   void _applyFilters() {
-    List<BusinessModel> filtered = _allBusinesses;
-    
-    // Filtre par type de commerce
-    if (_selectedBusinessType != null && _selectedBusinessType!.isNotEmpty) {
-      filtered = filtered.where((business) => business.businessType == _selectedBusinessType).toList();
+    try {
+      List<BusinessModel> filtered = _allBusinesses;
+      
+      // Filtre par type de commerce
+      if (_selectedBusinessType != null && _selectedBusinessType!.isNotEmpty) {
+        filtered = filtered.where((business) => business.businessType == _selectedBusinessType).toList();
+      }
+      
+      // Filtre pour afficher uniquement les commerces ouverts
+      if (_showOpenOnly) {
+        filtered = filtered.where((business) => business.isOpenNow()).toList();
+      }
+      
+      setState(() {
+        _filteredBusinesses = filtered;
+        _createMarkers();
+      });
+    } catch (e) {
+      if (mounted) {
+        ErrorHandler.showErrorSnackBar(
+          context, 
+          e,
+          fallbackMessage: AppTranslations.text(context, 'error_applying_filters'),
+        );
+      }
     }
-    
-    // Filtre pour afficher uniquement les commerces ouverts
-    if (_showOpenOnly) {
-      filtered = filtered.where((business) => business.isOpenNow()).toList();
-    }
-    
-    setState(() {
-      _filteredBusinesses = filtered;
-      _createMarkers();
-    });
   }
 
   // Créer les marqueurs pour la carte
   void _createMarkers() {
-    final Map<String, Marker> markerMap = {};
-    
-    for (final business in _filteredBusinesses) {
-      final isOpen = business.isOpenNow();
-      final BitmapDescriptor icon;
+    try {
+      final Map<String, Marker> markerMap = {};
       
-      // Déterminer l'icône appropriée
-      if (business.businessType == 'fixe') {
-        icon = isOpen ? _fixedBusinessIcon : _fixedClosedBusinessIcon;
-      } else {
-        icon = isOpen ? _mobileBusinessIcon : _mobileClosedBusinessIcon;
+      for (final business in _filteredBusinesses) {
+        final isOpen = business.isOpenNow();
+        final BitmapDescriptor icon;
+        
+        // Déterminer l'icône appropriée
+        if (business.businessType == 'fixe') {
+          icon = isOpen ? _fixedBusinessIcon : _fixedClosedBusinessIcon;
+        } else {
+          icon = isOpen ? _mobileBusinessIcon : _mobileClosedBusinessIcon;
+        }
+        
+        final marker = Marker(
+          markerId: MarkerId(business.id),
+          position: LatLng(business.latitude, business.longitude),
+          infoWindow: InfoWindow(
+            title: business.name,
+            snippet: '${business.businessType == 'fixe' 
+                ? AppTranslations.text(context, 'shop') 
+                : AppTranslations.text(context, 'mobile')} - ${isOpen 
+                ? AppTranslations.text(context, 'open') 
+                : AppTranslations.text(context, 'closed')}',
+            onTap: () => _navigateToBusinessDetails(business),
+          ),
+          icon: icon,
+          onTap: () {
+            _showBusinessInfoBottomSheet(business);
+          },
+        );
+        
+        markerMap[business.id] = marker;
       }
       
-      final marker = Marker(
-        markerId: MarkerId(business.id),
-        position: LatLng(business.latitude, business.longitude),
-        infoWindow: InfoWindow(
-          title: business.name,
-          snippet: '${business.businessType == 'fixe' ? 'Boutique' : 'Mobile'} - ${isOpen ? 'Ouvert' : 'Fermé'}',
-          onTap: () => _navigateToBusinessDetails(business),
-        ),
-        icon: icon,
-        onTap: () {
-          _showBusinessInfoBottomSheet(business);
-        },
-      );
-      
-      markerMap[business.id] = marker;
+      setState(() {
+        _markers = markerMap;
+      });
+    } catch (e) {
+      if (mounted) {
+        ErrorHandler.showErrorSnackBar(
+          context, 
+          e,
+          fallbackMessage: AppTranslations.text(context, 'error_creating_markers'),
+        );
+      }
     }
-    
-    setState(() {
-      _markers = markerMap;
-    });
   }
 
   // Obtenir l'icône appropriée pour le marqueur
@@ -215,237 +272,264 @@ class _ClientMapScreenState extends State<ClientMapScreen> {
 
   // Afficher la fiche du commerce en bas de l'écran
   void _showBusinessInfoBottomSheet(BusinessModel business) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) => DraggableScrollableSheet(
-        initialChildSize: 0.4,
-        minChildSize: 0.3,
-        maxChildSize: 0.9,
-        expand: false,
-        builder: (context, scrollController) {
-          return SingleChildScrollView(
-            controller: scrollController,
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Poignée de glissement
-                  Center(
-                    child: Container(
-                      width: 40,
-                      height: 5,
-                      decoration: BoxDecoration(
-                        color: Colors.grey[300],
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  
-                  // En-tête avec nom et statut
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Expanded(
-                        child: Text(
-                          business.name,
-                          style: const TextStyle(
-                            fontSize: 22,
-                            fontWeight: FontWeight.bold,
-                          ),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 6,
-                        ),
+    try {
+      showModalBottomSheet(
+        context: context,
+        isScrollControlled: true,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        builder: (context) => DraggableScrollableSheet(
+          initialChildSize: 0.4,
+          minChildSize: 0.3,
+          maxChildSize: 0.9,
+          expand: false,
+          builder: (context, scrollController) {
+            return SingleChildScrollView(
+              controller: scrollController,
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Poignée de glissement
+                    Center(
+                      child: Container(
+                        width: 40,
+                        height: 5,
                         decoration: BoxDecoration(
-                          color: business.isOpenNow() ? Colors.green : Colors.red,
-                          borderRadius: BorderRadius.circular(16),
+                          color: Colors.grey[300],
+                          borderRadius: BorderRadius.circular(10),
                         ),
-                        child: Text(
-                          business.isOpenNow() ? 'Ouvert' : 'Fermé',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    
+                    // En-tête avec nom et statut
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Expanded(
+                          child: Text(
+                            business.name,
+                            style: const TextStyle(
+                              fontSize: 22,
+                              fontWeight: FontWeight.bold,
+                            ),
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  
-                  // Type de commerce
-                  Row(
-                    children: [
-                      Icon(
-                        business.businessType == 'fixe'
-                            ? Icons.store
-                            : Icons.delivery_dining,
-                        color: business.businessType == 'fixe'
-                            ? Colors.blue
-                            : Colors.green,
-                        size: 20,
-                      ),
-                      const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 6,
+                          ),
+                          decoration: BoxDecoration(
+                            color: business.isOpenNow() ? Colors.green : Colors.red,
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          child: Text(
+                            business.isOpenNow() 
+                                ? AppTranslations.text(context, 'open') 
+                                : AppTranslations.text(context, 'closed'),
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    
+                    // Type de commerce
+                    Row(
+                      children: [
+                        Icon(
+                          business.businessType == 'fixe'
+                              ? Icons.store
+                              : Icons.delivery_dining,
+                          color: business.businessType == 'fixe'
+                              ? Colors.blue
+                              : Colors.green,
+                          size: 20,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          business.businessType == 'fixe'
+                              ? AppTranslations.text(context, 'fixed_business')
+                              : AppTranslations.text(context, 'mobile_business'),
+                          style: TextStyle(
+                            color: Colors.grey[700],
+                            fontSize: 16,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    
+                    // Description
+                    if (business.description.isNotEmpty) ...[
                       Text(
-                        business.businessType == 'fixe'
-                            ? 'Commerce fixe'
-                            : 'Commerce mobile',
-                        style: TextStyle(
-                          color: Colors.grey[700],
+                        AppTranslations.text(context, 'description'),
+                        style: const TextStyle(
                           fontSize: 16,
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
+                      const SizedBox(height: 4),
+                      Text(business.description),
+                      const SizedBox(height: 16),
                     ],
-                  ),
-                  const SizedBox(height: 16),
-                  
-                  // Description
-                  if (business.description.isNotEmpty) ...[
-                    const Text(
-                      'Description',
-                      style: TextStyle(
+                    
+                    // Horaires
+                    Text(
+                      AppTranslations.text(context, 'opening_hours'),
+                      style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
                     const SizedBox(height: 4),
-                    Text(business.description),
+                    Text('${business.openingTime} - ${business.closingTime}'),
                     const SizedBox(height: 16),
-                  ],
-                  
-                  // Horaires
-                  const Text(
-                    'Horaires',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text('${business.openingTime} - ${business.closingTime}'),
-                  const SizedBox(height: 16),
-                  
-                  // Adresse
-                  if (business.address.isNotEmpty) ...[
-                    const Text(
-                      'Adresse',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
+                    
+                    // Adresse
+                    if (business.address.isNotEmpty) ...[
+                      Text(
+                        AppTranslations.text(context, 'address'),
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(business.address),
-                    const SizedBox(height: 16),
-                  ],
-                  
-                  // Boutons d'action
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: [
-                      _ActionButton(
-                        icon: Icons.directions,
-                        label: 'Itinéraire',
-                        color: Colors.blue,
-                        onTap: () {
-                          // Ouvrir Google Maps
-                          Navigator.pop(context);
-                        },
-                      ),
-                      _ActionButton(
-                        icon: Icons.favorite_border,
-                        label: 'Favoris',
-                        color: Colors.red,
-                        onTap: () {
-                          // Ajouter aux favoris
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text('${business.name} ajouté aux favoris'),
-                            ),
-                          );
-                          Navigator.pop(context);
-                        },
-                      ),
-                      _ActionButton(
-                        icon: Icons.share,
-                        label: 'Partager',
-                        color: Colors.green,
-                        onTap: () {
-                          // Partager
-                          Navigator.pop(context);
-                        },
-                      ),
+                      const SizedBox(height: 4),
+                      Text(business.address),
+                      const SizedBox(height: 16),
                     ],
-                  ),
-                  const SizedBox(height: 16),
-                  
-                  // Bouton pour afficher plus de détails
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed: () {
-                        Navigator.pop(context);
-                        _navigateToBusinessDetails(business);
-                      },
-                      style: ElevatedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                      ),
-                      child: const Text('Voir plus de détails'),
+                    
+                    // Boutons d'action
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      children: [
+                        _ActionButton(
+                          icon: Icons.directions,
+                          label: AppTranslations.text(context, 'directions'),
+                          color: Colors.blue,
+                          onTap: () {
+                            // Ouvrir Google Maps
+                            Navigator.pop(context);
+                          },
+                        ),
+                        _ActionButton(
+                          icon: Icons.favorite_border,
+                          label: AppTranslations.text(context, 'favorites'),
+                          color: Colors.red,
+                          onTap: () {
+                            // Ajouter aux favoris
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(AppTranslations.textWithParams(
+                                  context, 'added_to_favorites', [business.name])),
+                              ),
+                            );
+                            Navigator.pop(context);
+                          },
+                        ),
+                        _ActionButton(
+                          icon: Icons.share,
+                          label: AppTranslations.text(context, 'share'),
+                          color: Colors.green,
+                          onTap: () {
+                            // Partager
+                            Navigator.pop(context);
+                          },
+                        ),
+                      ],
                     ),
-                  ),
-                ],
+                    const SizedBox(height: 16),
+                    
+                    // Bouton pour afficher plus de détails
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: () {
+                          Navigator.pop(context);
+                          _navigateToBusinessDetails(business);
+                        },
+                        style: ElevatedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                        ),
+                        child: Text(AppTranslations.text(context, 'see_more_details')),
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
-          );
-        },
-      ),
-    );
+            );
+          },
+        ),
+      );
+    } catch (e) {
+      if (mounted) {
+        ErrorHandler.showErrorSnackBar(
+          context, 
+          e,
+          fallbackMessage: AppTranslations.text(context, 'error_showing_details'),
+        );
+      }
+    }
   }
 
   // Naviguer vers les détails d'un commerce
   void _navigateToBusinessDetails(BusinessModel business) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => BusinessDetailsScreen(business: business),
-      ),
-    );
+    try {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => BusinessDetailsScreen(business: business),
+        ),
+      );
+    } catch (e) {
+      if (mounted) {
+        ErrorHandler.showErrorSnackBar(
+          context, 
+          e,
+          fallbackMessage: AppTranslations.text(context, 'error_opening_details'),
+        );
+      }
+    }
   }
 
   // Ouvrir l'écran de filtres
   void _openFilterScreen() async {
-    final result = await Navigator.push<Map<String, dynamic>>(
-      context,
-      MaterialPageRoute(
-        builder: (context) => FilterScreen(
-          selectedType: _selectedBusinessType,
-          showOpenOnly: _showOpenOnly,
+    try {
+      final result = await Navigator.push<Map<String, dynamic>>(
+        context,
+        MaterialPageRoute(
+          builder: (context) => FilterScreen(
+            selectedType: _selectedBusinessType,
+            showOpenOnly: _showOpenOnly,
+          ),
         ),
-      ),
-    );
-    
-    if (result != null) {
-      setState(() {
-        _selectedBusinessType = result['selectedType'];
-        _showOpenOnly = result['showOpenOnly'];
-        _applyFilters();
-      });
+      );
+      
+      if (result != null) {
+        setState(() {
+          _selectedBusinessType = result['selectedType'];
+          _showOpenOnly = result['showOpenOnly'];
+          _applyFilters();
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        ErrorHandler.showErrorSnackBar(
+          context, 
+          e,
+          fallbackMessage: AppTranslations.text(context, 'error_filter_screen'),
+        );
+      }
     }
-  }
-
-  void _showErrorSnackBar(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message)),
-    );
   }
 
   @override
@@ -453,7 +537,7 @@ class _ClientMapScreenState extends State<ClientMapScreen> {
     return Scaffold(
       appBar: widget.showAppBar
           ? CustomAppBar(
-              title: 'Commerces à proximité',
+              title: AppTranslations.text(context, 'nearby_businesses'),
               currentUser: _currentUser,
               actions: [
                 IconButton(
@@ -520,7 +604,7 @@ class _ClientMapScreenState extends State<ClientMapScreen> {
                           const Icon(Icons.filter_alt, size: 16),
                           const SizedBox(width: 4),
                           Text(
-                            'Filtres actifs',
+                            AppTranslations.text(context, 'active_filters'),
                             style: TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.bold,

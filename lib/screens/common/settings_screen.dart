@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import '../../models/user_model.dart';
 import '../../services/auth_service.dart';
+import '../../l10n/translations.dart';
 
 class SettingsScreen extends StatefulWidget {
   final UserModel? user;
@@ -63,8 +64,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     
     // Afficher un message de confirmation
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Paramètres sauvegardés'),
+      SnackBar(
+        content: Text(AppTranslations.text(context, 'settings_saved')),
         backgroundColor: Colors.green,
       ),
     );
@@ -77,13 +78,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Paramètres'),
+        title: Text(AppTranslations.text(context, 'settings')),
         actions: [
           TextButton(
             onPressed: _saveSettings,
-            child: const Text(
-              'Enregistrer',
-              style: TextStyle(
+            child: Text(
+              AppTranslations.text(context, 'save'),
+              style: const TextStyle(
                 color: Colors.white,
                 fontWeight: FontWeight.bold,
               ),
@@ -94,10 +95,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
       body: ListView(
         children: [
           // Section Notifications
-          _buildSectionHeader('Notifications'),
+          _buildSectionHeader(context, AppTranslations.text(context, 'notifications')),
           SwitchListTile(
-            title: const Text('Activer les notifications'),
-            subtitle: const Text('Recevez des mises à jour sur les commerces à proximité'),
+            title: Text(AppTranslations.text(context, 'enable_notifications')),
+            subtitle: Text(AppTranslations.text(context, 'notifications_desc')),
             value: _notificationsEnabled,
             onChanged: (value) {
               setState(() {
@@ -108,10 +109,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
           const Divider(),
           
           // Section Localisation
-          _buildSectionHeader('Localisation'),
+          _buildSectionHeader(context, AppTranslations.text(context, 'location')),
           SwitchListTile(
-            title: const Text('Activer la localisation'),
-            subtitle: const Text('Permet de voir les commerces à proximité'),
+            title: Text(AppTranslations.text(context, 'enable_location')),
+            subtitle: Text(AppTranslations.text(context, 'location_desc')),
             value: _locationEnabled,
             onChanged: (value) {
               setState(() {
@@ -122,8 +123,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
           
           // Rayon de recherche
           ListTile(
-            title: const Text('Rayon de recherche'),
-            subtitle: Text('${_searchRadius.toInt()} km'),
+            title: Text(AppTranslations.text(context, 'search_radius')),
+            subtitle: Text('${_searchRadius.toInt()} ${AppTranslations.text(context, 'km')}'),
             trailing: SizedBox(
               width: 150,
               child: Slider(
@@ -131,7 +132,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 min: 1.0,
                 max: 20.0,
                 divisions: 19,
-                label: '${_searchRadius.toInt()} km',
+                label: '${_searchRadius.toInt()} ${AppTranslations.text(context, 'km')}',
                 onChanged: (value) {
                   setState(() {
                     _searchRadius = value;
@@ -143,10 +144,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
           const Divider(),
           
           // Section Apparence
-          _buildSectionHeader('Apparence'),
+          _buildSectionHeader(context, AppTranslations.text(context, 'appearance')),
           SwitchListTile(
-            title: const Text('Mode sombre'),
-            subtitle: const Text('Activer le thème sombre'),
+            title: Text(AppTranslations.text(context, 'dark_mode')),
+            subtitle: Text(AppTranslations.text(context, 'dark_mode_desc')),
             value: _darkModeEnabled,
             onChanged: (value) {
               setState(() {
@@ -159,22 +160,24 @@ class _SettingsScreenState extends State<SettingsScreen> {
           const Divider(),
           
           // Section Compte
-          _buildSectionHeader('Compte'),
+          _buildSectionHeader(context, AppTranslations.text(context, 'account')),
           ListTile(
-            title: const Text('Email'),
-            subtitle: Text(widget.user?.email ?? 'Non connecté'),
+            title: Text(AppTranslations.text(context, 'email')),
+            subtitle: Text(widget.user?.email ?? AppTranslations.text(context, 'user_not_connected')),
             leading: const Icon(Icons.email),
           ),
           ListTile(
-            title: const Text('Type de compte'),
-            subtitle: Text(widget.user?.userType == 'client' ? 'Client' : 'Commerçant'),
+            title: Text(AppTranslations.text(context, 'account_type')),
+            subtitle: Text(widget.user?.userType == 'client' 
+                ? AppTranslations.text(context, 'client') 
+                : AppTranslations.text(context, 'vendor')),
             leading: const Icon(Icons.badge),
           ),
           
           // Option pour supprimer le compte
           ListTile(
-            title: const Text('Supprimer mon compte'),
-            subtitle: const Text('Cette action est irréversible'),
+            title: Text(AppTranslations.text(context, 'delete_account')),
+            subtitle: Text(AppTranslations.text(context, 'delete_account_desc')),
             leading: const Icon(Icons.delete_forever, color: Colors.red),
             onTap: _showDeleteAccountConfirmation,
           ),
@@ -185,7 +188,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
   
-  Widget _buildSectionHeader(String title) {
+  Widget _buildSectionHeader(BuildContext context, String title) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
       child: Text(
@@ -203,14 +206,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Supprimer votre compte ?'),
-        content: const Text(
-          'Cette action est irréversible. Toutes vos données seront supprimées définitivement.',
-        ),
+        title: Text(AppTranslations.text(context, 'delete_account_question')),
+        content: Text(AppTranslations.text(context, 'delete_account_warning')),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Annuler'),
+            child: Text(AppTranslations.text(context, 'cancel')),
           ),
           TextButton(
             style: TextButton.styleFrom(
@@ -220,7 +221,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               Navigator.pop(context);
               _deleteAccount();
             },
-            child: const Text('Supprimer'),
+            child: Text(AppTranslations.text(context, 'delete')),
           ),
         ],
       ),
@@ -254,8 +255,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
       
       // Afficher un message de confirmation
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Votre compte a été supprimé'),
+        SnackBar(
+          content: Text(AppTranslations.text(context, 'account_deleted')),
           backgroundColor: Colors.green,
         ),
       );
@@ -267,10 +268,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
       // Afficher un message d'erreur
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Erreur lors de la suppression du compte: $e'),
+          content: Text('${AppTranslations.text(context, 'error_deleting_account')}: $e'),
           backgroundColor: Colors.red,
         ),
       );
     }
   }
+
+  
 }

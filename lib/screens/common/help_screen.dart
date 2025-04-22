@@ -1,6 +1,7 @@
 // Fichier screens/common/help_screen.dart
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../../l10n/translations.dart';
 import 'faq_screen.dart';
 import 'user_guide_screen.dart';
 import 'vendor_guide_screen.dart';
@@ -23,7 +24,7 @@ class HelpScreen extends StatelessWidget {
     final Uri emailUri = Uri(
       scheme: 'mailto',
       path: 'support@commerceconnect.com',
-      query: 'subject=Demande d\'aide - Commerce Connect&body=Décrivez votre problème ici:',
+      query: 'subject=Demande d\'aide - Warap&body=Décrivez votre problème ici:',
     );
     
     try {
@@ -37,16 +38,16 @@ class HelpScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Aide et support'),
+        title: Text(AppTranslations.text(context, 'help_support')),
       ),
       body: ListView(
         padding: const EdgeInsets.all(16.0),
         children: [
           // En-tête
-          const Center(
+          Center(
             child: Text(
-              'Comment pouvons-nous vous aider ?',
-              style: TextStyle(
+              AppTranslations.text(context, 'how_can_we_help'),
+              style: const TextStyle(
                 fontSize: 22,
                 fontWeight: FontWeight.bold,
               ),
@@ -59,8 +60,8 @@ class HelpScreen extends StatelessWidget {
           _buildHelpCard(
             context,
             icon: Icons.help_outline,
-            title: 'Questions fréquentes',
-            description: 'Trouvez des réponses aux questions les plus courantes.',
+            title: AppTranslations.text(context, 'faq_title'),
+            description: AppTranslations.text(context, 'faq_desc'),
             onTap: () {
               Navigator.push(
                 context,
@@ -74,8 +75,8 @@ class HelpScreen extends StatelessWidget {
           _buildHelpCard(
             context,
             icon: Icons.book,
-            title: 'Guide d\'utilisation',
-            description: 'Découvrez toutes les fonctionnalités de l\'application.',
+            title: AppTranslations.text(context, 'user_guide_title'),
+            description: AppTranslations.text(context, 'user_guide_desc'),
             onTap: () {
               Navigator.push(
                 context,
@@ -89,20 +90,20 @@ class HelpScreen extends StatelessWidget {
           _buildHelpCard(
             context,
             icon: Icons.email,
-            title: 'Contacter le support',
-            description: 'Envoyez un email à notre équipe de support.',
+            title: AppTranslations.text(context, 'contact_support_title'),
+            description: AppTranslations.text(context, 'contact_support_desc'),
             onTap: _sendEmail,
           ),
           
           _buildHelpCard(
             context,
             icon: Icons.chat,
-            title: 'Chat en direct',
-            description: 'Discutez avec un représentant du service client.',
+            title: AppTranslations.text(context, 'live_chat_title'),
+            description: AppTranslations.text(context, 'live_chat_desc'),
             onTap: () {
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Le chat en direct sera disponible prochainement'),
+                SnackBar(
+                  content: Text(AppTranslations.text(context, 'live_chat_soon')),
                 ),
               );
             },
@@ -111,8 +112,8 @@ class HelpScreen extends StatelessWidget {
           _buildHelpCard(
             context,
             icon: Icons.shopping_bag,
-            title: 'Guide pour les commerçants',
-            description: 'Comment gérer efficacement votre boutique.',
+            title: AppTranslations.text(context, 'vendor_guide_title'),
+            description: AppTranslations.text(context, 'vendor_guide_desc'),
             onTap: () {
               Navigator.push(
                 context,
@@ -127,11 +128,11 @@ class HelpScreen extends StatelessWidget {
           
           // Section des liens sociaux
           const Divider(),
-          const Padding(
-            padding: EdgeInsets.symmetric(vertical: 16),
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 16),
             child: Text(
-              'Suivez-nous sur les réseaux sociaux',
-              style: TextStyle(
+              AppTranslations.text(context, 'follow_social'),
+              style: const TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
               ),
@@ -166,17 +167,17 @@ class HelpScreen extends StatelessWidget {
           ),
           
           const SizedBox(height: 32),
-          const Text(
-            'Version de l\'application: 1.0.0',
-            style: TextStyle(color: Colors.grey),
+          Text(
+            AppTranslations.text(context, 'app_version'),
+            style: const TextStyle(color: Colors.grey),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 8),
           GestureDetector(
             onTap: () => _launchURL('https://commerceconnect.com/privacy'),
-            child: const Text(
-              'Politique de confidentialité',
-              style: TextStyle(
+            child: Text(
+              AppTranslations.text(context, 'privacy_policy'),
+              style: const TextStyle(
                 color: Colors.blue,
                 decoration: TextDecoration.underline,
               ),
@@ -186,9 +187,9 @@ class HelpScreen extends StatelessWidget {
           const SizedBox(height: 8),
           GestureDetector(
             onTap: () => _launchURL('https://commerceconnect.com/terms'),
-            child: const Text(
-              'Conditions d\'utilisation',
-              style: TextStyle(
+            child: Text(
+              AppTranslations.text(context, 'terms_of_use'),
+              style: const TextStyle(
                 color: Colors.blue,
                 decoration: TextDecoration.underline,
               ),

@@ -2,7 +2,11 @@
 import 'package:flutter/material.dart';
 import 'dart:math';
 import '../../services/auth_service.dart';
+import '../../services/error_handler.dart'; // Ajout de l'import
 import 'register_screen.dart';
+import '../../l10n/translations.dart';
+import 'package:provider/provider.dart';
+import '../../providers/locale_provider.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({Key? key}) : super(key: key);
@@ -56,8 +60,10 @@ class _LoginScreenState extends State<LoginScreen> {
       });
       
       print('Erreur de connexion: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erreur: ${e.toString().substring(0, min(50, e.toString().length))}...')),
+      ErrorHandler.showErrorSnackBar(
+        context, 
+        e, 
+        onRetry: _signIn,
       );
     }
   }
@@ -69,11 +75,36 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
+  Future<void> _resendConfirmationEmail() async {
+    if (_email.isEmpty || !_email.contains('@') || !_email.contains('.')) {
+      ErrorHandler.showErrorSnackBar(
+        context, 
+        ErrorType.validation,
+        fallbackMessage: AppTranslations.text(context, 'enter_valid_email'),
+      );
+      return;
+    }
+    
+    try {
+      await _authService.resendConfirmationEmail(_email);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(AppTranslations.text(context, 'confirmation_sent'))),
+      );
+    } catch (e) {
+      ErrorHandler.showErrorSnackBar(
+        context, 
+        e,
+        onRetry: _resendConfirmationEmail,
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Connexion'),
+        title: Text(AppTranslations.text(context, 'login')),
       ),
       body: Center(
         child: SingleChildScrollView(
@@ -91,10 +122,10 @@ class _LoginScreenState extends State<LoginScreen> {
                   color: Colors.blue,
                 ),
                 const SizedBox(height: 8),
-                const Text(
-                  'Commerce Connect',
+                Text(
+                  AppTranslations.text(context, 'login'),
                   textAlign: TextAlign.center,
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontSize: 24,
                     fontWeight: FontWeight.bold,
                   ),
@@ -103,11 +134,11 @@ class _LoginScreenState extends State<LoginScreen> {
                 
                 // Champ email
                 TextFormField(
-                  decoration: const InputDecoration(
-                    labelText: 'Email',
-                    prefixIcon: Icon(Icons.email),
-                    border: OutlineInputBorder(),
-                    hintText: 'exemple@email.com',
+                  decoration: InputDecoration(
+                    labelText: AppTranslations.text(context, 'email'),
+                    prefixIcon: const Icon(Icons.email),
+                    border: const OutlineInputBorder(),
+                    hintText: AppTranslations.text(context, 'email_hint'),
                   ),
                   keyboardType: TextInputType.emailAddress,
                   validator: (value) {
@@ -131,7 +162,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 // Champ mot de passe
                 TextFormField(
                   decoration: InputDecoration(
-                    labelText: 'Mot de passe',
+                    labelText: AppTranslations.text(context, 'password'),
                     prefixIcon: const Icon(Icons.lock),
                     suffixIcon: IconButton(
                       icon: Icon(
@@ -172,33 +203,21 @@ class _LoginScreenState extends State<LoginScreen> {
                             borderRadius: BorderRadius.circular(8),
                           ),
                         ),
-                        child: const Text(
-                          'Se connecter',
-                          style: TextStyle(fontSize: 16),
+                        child: Text(
+                          AppTranslations.text(context, 'sign_in'),
+                          style: const TextStyle(fontSize: 16),
                         ),
                       ),
                 ElevatedButton(
-  onPressed: () async {
-    try {
-      // Utilisez l'email saisi dans le formulaire
-      await _authService.resendConfirmationEmail(_email);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Email de confirmation renvoyé. Vérifiez votre boîte de réception.')),
-      );
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erreur: ${e.toString()}')),
-      );
-    }
-  },
-  child: const Text('Renvoyer l\'email de confirmation'),
-),
+                  onPressed: _resendConfirmationEmail,
+                  child: Text(AppTranslations.text(context, 'resend_confirmation')),
+                ),
                 const SizedBox(height: 16),
                 
                 // Lien vers l'inscription
                 TextButton(
                   onPressed: _navigateToRegister,
-                  child: const Text('Pas encore de compte ? S\'inscrire'),
+                  child: Text(AppTranslations.text(context, 'no_account')),
                 ),
               ],
             ),

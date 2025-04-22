@@ -2,7 +2,9 @@
 import 'package:flutter/material.dart';
 import '../../models/business_model.dart';
 import '../../services/business_service.dart';
+import '../../services/error_handler.dart'; // Ajout de l'import
 import 'business_details_screen.dart';
+import '../../l10n/translations.dart';
 
 class FavoritesScreen extends StatefulWidget {
   const FavoritesScreen({Key? key}) : super(key: key);
@@ -40,21 +42,42 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
       setState(() {
         _isLoading = false;
       });
-      _showErrorSnackBar('Erreur lors du chargement des favoris');
+      if (mounted) {
+        ErrorHandler.showErrorSnackBar(
+          context, 
+          e,
+          fallbackMessage: AppTranslations.text(context, 'error_loading_favorites'),
+          onRetry: _loadFavorites,
+        );
+      }
     }
   }
   
-  void _showErrorSnackBar(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message)),
-    );
+  void _removeFavorite(int index, BusinessModel business) {
+    try {
+      setState(() {
+        _favorites.removeAt(index);
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(AppTranslations.textWithParams(
+            context, 'removed_from_favorites', [business.name])),
+        ),
+      );
+    } catch (e) {
+      ErrorHandler.showErrorSnackBar(
+        context, 
+        e,
+        fallbackMessage: AppTranslations.text(context, 'error_removing_favorite'),
+      );
+    }
   }
   
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Mes Favoris'),
+        title: Text(AppTranslations.text(context, 'my_favorites')),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
@@ -65,10 +88,10 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _favorites.isEmpty
-              ? const Center(
+              ? Center(
                   child: Text(
-                    'Aucun favori pour le moment',
-                    style: TextStyle(fontSize: 18),
+                    AppTranslations.text(context, 'no_favorites'),
+                    style: const TextStyle(fontSize: 18),
                   ),
                 )
               : ListView.builder(
@@ -98,22 +121,12 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
                         ),
                         subtitle: Text(
                           business.isOpenNow()
-                              ? 'Ouvert • ${business.address}'
-                              : 'Fermé • ${business.address}',
+                              ? '${AppTranslations.text(context, 'open')} • ${business.address}'
+                              : '${AppTranslations.text(context, 'closed')} • ${business.address}',
                         ),
                         trailing: IconButton(
                           icon: const Icon(Icons.favorite, color: Colors.red),
-                          onPressed: () {
-                            // Enlever des favoris
-                            setState(() {
-                              _favorites.removeAt(index);
-                            });
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text('${business.name} retiré des favoris'),
-                              ),
-                            );
-                          },
+                          onPressed: () => _removeFavorite(index, business),
                         ),
                         onTap: () {
                           Navigator.push(

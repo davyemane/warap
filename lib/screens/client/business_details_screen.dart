@@ -4,6 +4,8 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:share_plus/share_plus.dart';
 import '../../models/business_model.dart';
 import '../../widgets/common/custom_app_bar.dart';
+import '../../l10n/translations.dart';
+import '../../services/error_handler.dart'; // Ajout de l'import
 
 class BusinessDetailsScreen extends StatelessWidget {
   final BusinessModel business;
@@ -11,18 +13,18 @@ class BusinessDetailsScreen extends StatelessWidget {
   const BusinessDetailsScreen({Key? key, required this.business}) : super(key: key);
 
   // Fonction de partage
-  void _shareBusiness() {
+  void _shareBusiness(BuildContext context) {
     final String message = """
 ${business.name}
-${business.businessType == 'fixe' ? 'Commerce fixe' : 'Commerce mobile'}
-${business.isOpenNow() ? 'Ouvert' : 'Fermé'} - Horaires: ${business.openingTime} - ${business.closingTime}
-${business.address.isNotEmpty ? 'Adresse: ${business.address}' : ''}
+${business.businessType == 'fixe' ? AppTranslations.text(context, 'fixed_business') : AppTranslations.text(context, 'mobile_business')}
+${business.isOpenNow() ? AppTranslations.text(context, 'open') : AppTranslations.text(context, 'closed')} - ${AppTranslations.text(context, 'opening_hours')}: ${business.openingTime} - ${business.closingTime}
+${business.address.isNotEmpty ? '${AppTranslations.text(context, 'address')}: ${business.address}' : ''}
 ${business.description.isNotEmpty ? '\n${business.description}' : ''}
 
-Découvrez ce commerce sur Warap!
+${AppTranslations.text(context, 'discover_app')}
 """;
 
-    Share.share(message, subject: 'Découvrez ${business.name}');
+    Share.share(message, subject: AppTranslations.textWithParams(context, 'discover_business', [business.name]));
   }
 
   @override
@@ -37,15 +39,16 @@ Découvrez ce commerce sur Warap!
             icon: const Icon(Icons.favorite_border),
             onPressed: () {
               ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('${business.name} ajouté aux favoris')),
+                SnackBar(content: Text(AppTranslations.textWithParams(
+                  context, 'added_to_favorites', [business.name]))),
               );
             },
           ),
           // Bouton de partage
           IconButton(
             icon: const Icon(Icons.share),
-            onPressed: _shareBusiness,
-            tooltip: 'Partager',
+            onPressed: () => _shareBusiness(context),
+            tooltip: AppTranslations.text(context, 'share'),
           ),
         ],
       ),
@@ -60,7 +63,9 @@ Découvrez ce commerce sur Warap!
               children: [
                 Chip(
                   label: Text(
-                    business.businessType == 'fixe' ? 'Commerce fixe' : 'Commerce mobile',
+                    business.businessType == 'fixe'
+                        ? AppTranslations.text(context, 'fixed_business')
+                        : AppTranslations.text(context, 'mobile_business'),
                   ),
                   backgroundColor: business.businessType == 'fixe' 
                       ? Colors.blue.shade100 
@@ -68,7 +73,9 @@ Découvrez ce commerce sur Warap!
                 ),
                 Chip(
                   label: Text(
-                    business.isOpenNow() ? 'Ouvert' : 'Fermé',
+                    business.isOpenNow()
+                        ? AppTranslations.text(context, 'open')
+                        : AppTranslations.text(context, 'closed'),
                   ),
                   backgroundColor: business.isOpenNow() 
                       ? Colors.green.shade100 
@@ -79,45 +86,45 @@ Découvrez ce commerce sur Warap!
             const SizedBox(height: 16),
             
             // Description
-            const Text(
-              'Description',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            Text(
+              AppTranslations.text(context, 'description'),
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
             Text(business.description),
             const SizedBox(height: 16),
             
             // Heures d'ouverture
-            const Text(
-              'Heures d\'ouverture',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            Text(
+              AppTranslations.text(context, 'opening_hours'),
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
-            Text('De ${business.openingTime} à ${business.closingTime}'),
+            Text('${AppTranslations.text(context, 'from')} ${business.openingTime} ${AppTranslations.text(context, 'to')} ${business.closingTime}'),
             const SizedBox(height: 16),
             
             // Adresse
             if (business.address.isNotEmpty) ...[
-              const Text(
-                'Adresse',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              Text(
+                AppTranslations.text(context, 'address'),
+                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 8),
               Text(business.address),
               const SizedBox(height: 8),
               TextButton.icon(
                 icon: const Icon(Icons.map),
-                label: const Text('Ouvrir dans Google Maps'),
-                onPressed: () => _openMap(business.latitude, business.longitude),
+                label: Text(AppTranslations.text(context, 'open_in_maps')),
+                onPressed: () => _openMap(context, business.latitude, business.longitude),
               ),
               const SizedBox(height: 16),
             ],
             
             // Téléphone
             if (business.phone.isNotEmpty) ...[
-              const Text(
-                'Contact',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              Text(
+                AppTranslations.text(context, 'contact'),
+                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 8),
               Row(
@@ -126,8 +133,8 @@ Découvrez ce commerce sur Warap!
                   const SizedBox(width: 16),
                   TextButton.icon(
                     icon: const Icon(Icons.phone),
-                    label: const Text('Appeler'),
-                    onPressed: () => _callPhone(business.phone),
+                    label: Text(AppTranslations.text(context, 'call')),
+                    onPressed: () => _callPhone(context, business.phone),
                   ),
                 ],
               ),
@@ -140,25 +147,26 @@ Découvrez ce commerce sur Warap!
               children: [
                 _ActionButton(
                   icon: Icons.directions,
-                  label: 'Itinéraire',
+                  label: AppTranslations.text(context, 'directions'),
                   color: Colors.blue,
-                  onTap: () => _openMap(business.latitude, business.longitude),
+                  onTap: () => _openMap(context, business.latitude, business.longitude),
                 ),
                 _ActionButton(
                   icon: Icons.favorite_border,
-                  label: 'Favoris',
+                  label: AppTranslations.text(context, 'favorites'),
                   color: Colors.red,
                   onTap: () {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('${business.name} ajouté aux favoris')),
+                      SnackBar(content: Text(AppTranslations.textWithParams(
+                        context, 'added_to_favorites', [business.name]))),
                     );
                   },
                 ),
                 _ActionButton(
                   icon: Icons.share,
-                  label: 'Partager',
+                  label: AppTranslations.text(context, 'share'),
                   color: Colors.green,
-                  onTap: _shareBusiness,
+                  onTap: () => _shareBusiness(context),
                 ),
               ],
             ),
@@ -168,19 +176,37 @@ Découvrez ce commerce sur Warap!
     );
   }
 
-  Future<void> _openMap(double latitude, double longitude) async {
+  Future<void> _openMap(BuildContext context, double latitude, double longitude) async {
     final Uri url = Uri.parse('https://www.google.com/maps/search/?api=1&query=$latitude,$longitude');
     
-    if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
-      throw Exception('Could not launch $url');
+    try {
+      if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
+        throw Exception('Could not launch $url');
+      }
+    } catch (e) {
+      ErrorHandler.showErrorSnackBar(
+        context,
+        e,
+        fallbackMessage: AppTranslations.text(context, 'error_opening_maps'),
+        onRetry: () => _openMap(context, latitude, longitude),
+      );
     }
   }
 
-  Future<void> _callPhone(String phone) async {
+  Future<void> _callPhone(BuildContext context, String phone) async {
     final Uri url = Uri.parse('tel:$phone');
     
-    if (!await launchUrl(url)) {
-      throw Exception('Could not launch $url');
+    try {
+      if (!await launchUrl(url)) {
+        throw Exception('Could not launch $url');
+      }
+    } catch (e) {
+      ErrorHandler.showErrorSnackBar(
+        context,
+        e,
+        fallbackMessage: AppTranslations.text(context, 'error_making_call'),
+        onRetry: () => _callPhone(context, phone),
+      );
     }
   }
 }

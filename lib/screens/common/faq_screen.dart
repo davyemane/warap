@@ -1,40 +1,36 @@
 import 'package:flutter/material.dart';
+import '../../l10n/translations.dart';
 
 class FAQScreen extends StatelessWidget {
   const FAQScreen({Key? key}) : super(key: key);
 
-  final List<Map<String, String>> faqData = const [
-    {
-      'question': 'Comment créer un compte ?',
-      'answer':
-          'Pour créer un compte, cliquez sur le bouton "S\'inscrire" sur la page d\'accueil et remplissez le formulaire.'
-    },
-    {
-      'question': 'Comment modifier mes informations personnelles ?',
-      'answer':
-          'Rendez-vous dans la section "Profil", puis appuyez sur "Modifier mes informations".'
-    },
-    {
-      'question': 'Comment ajouter un commerce ?',
-      'answer':
-          'Allez dans la section "Mes commerces" et cliquez sur "Ajouter un commerce". Suivez ensuite les instructions.'
-    },
-    {
-      'question': 'Puis-je contacter un commerçant directement ?',
-      'answer':
-          'Oui, chaque fiche commerce contient un bouton pour contacter directement le commerçant par téléphone ou email.'
-    },
-    {
-      'question': 'L’application est-elle gratuite ?',
-      'answer':
-          'Oui, l’application est entièrement gratuite pour les utilisateurs. Certaines fonctionnalités premium seront disponibles bientôt.'
-    },
-  ];
-
   @override
   Widget build(BuildContext context) {
+    final List<Map<String, String>> faqData = [
+      {
+        'question': AppTranslations.text(context, 'create_account_question'),
+        'answer': AppTranslations.text(context, 'create_account_answer')
+      },
+      {
+        'question': AppTranslations.text(context, 'edit_info_question'),
+        'answer': AppTranslations.text(context, 'edit_info_answer')
+      },
+      {
+        'question': AppTranslations.text(context, 'add_business_question'),
+        'answer': AppTranslations.text(context, 'add_business_answer')
+      },
+      {
+        'question': AppTranslations.text(context, 'contact_vendor_question'),
+        'answer': AppTranslations.text(context, 'contact_vendor_answer')
+      },
+      {
+        'question': AppTranslations.text(context, 'app_free_question'),
+        'answer': AppTranslations.text(context, 'app_free_answer')
+      },
+    ];
+
     return Scaffold(
-      appBar: AppBar(title: const Text('Questions fréquentes')),
+      appBar: AppBar(title: Text(AppTranslations.text(context, 'faq'))),
       body: ListView.builder(
         padding: const EdgeInsets.all(16),
         itemCount: faqData.length,

@@ -3,12 +3,14 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:share_plus/share_plus.dart';
 import '../../services/auth_service.dart';
+import '../../services/error_handler.dart'; // Ajout de l'import
 import '../../models/user_model.dart';
 import '../auth/login_screen.dart';
 import '../common/edit_profile_screen.dart';
 import '../common/settings_screen.dart';
 import '../common/help_screen.dart';
 import '../common/language_screen.dart';
+import '../../l10n/translations.dart';
 
 class ProfileScreen extends StatefulWidget {
   final bool showAppBar;
@@ -59,55 +61,89 @@ class _ProfileScreenState extends State<ProfileScreen> {
       setState(() {
         _isLoading = false;
       });
-      _showErrorSnackBar('Erreur lors du chargement des données utilisateur');
+      if (mounted) {
+        ErrorHandler.showErrorSnackBar(
+          context, 
+          e,
+          fallbackMessage: AppTranslations.text(context, 'error_loading_user_data'),
+          onRetry: _loadUserData,
+        );
+      }
     }
   }
   
   Future<void> _editProfile() async {
     if (_currentUser == null) return;
     
-    final updatedUser = await Navigator.push<UserModel>(
-      context,
-      MaterialPageRoute(
-        builder: (context) => EditProfileScreen(user: _currentUser!),
-      ),
-    );
-    
-    if (updatedUser != null) {
-      setState(() {
-        _currentUser = updatedUser;
-      });
+    try {
+      final updatedUser = await Navigator.push<UserModel>(
+        context,
+        MaterialPageRoute(
+          builder: (context) => EditProfileScreen(user: _currentUser!),
+        ),
+      );
+      
+      if (updatedUser != null) {
+        setState(() {
+          _currentUser = updatedUser;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        ErrorHandler.showErrorSnackBar(
+          context, 
+          e,
+          fallbackMessage: AppTranslations.text(context, 'error_editing_profile'),
+        );
+      }
     }
   }
   
   // Ouvrir les paramètres
   void _openSettings() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => SettingsScreen(
-          user: _currentUser,
-          onSettingsChanged: () {
-            // Recharger les données utilisateur après modification des paramètres
-            _loadUserData();
-          },
+    try {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => SettingsScreen(
+            user: _currentUser,
+            onSettingsChanged: () {
+              // Recharger les données utilisateur après modification des paramètres
+              _loadUserData();
+            },
+          ),
         ),
-      ),
-    );
+      );
+    } catch (e) {
+      if (mounted) {
+        ErrorHandler.showErrorSnackBar(
+          context, 
+          e,
+          fallbackMessage: AppTranslations.text(context, 'error_opening_settings'),
+        );
+      }
+    }
   }
   
   // Ouvrir l'aide et le support
   void _openHelpAndSupport() {
-    // Première option: ouvrir un écran d'aide intégré
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => const HelpScreen(),
-      ),
-    );
-    
-    // Deuxième option: ouvrir un site web d'aide
-    // _launchURL('https://commerceconnect.example.com/help');
+    try {
+      // Première option: ouvrir un écran d'aide intégré
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => const HelpScreen(),
+        ),
+      );
+    } catch (e) {
+      if (mounted) {
+        ErrorHandler.showErrorSnackBar(
+          context, 
+          e,
+          fallbackMessage: AppTranslations.text(context, 'error_opening_help'),
+        );
+      }
+    }
   }
   
   // Ouvrir une URL
@@ -118,105 +154,88 @@ class _ProfileScreenState extends State<ProfileScreen> {
         throw Exception('Could not launch $url');
       }
     } catch (e) {
-      _showErrorSnackBar('Impossible d\'ouvrir le lien');
+      if (mounted) {
+        ErrorHandler.showErrorSnackBar(
+          context, 
+          e,
+          fallbackMessage: AppTranslations.text(context, 'error_opening_link'),
+          onRetry: () => _launchURL(urlString),
+        );
+      }
     }
   }
   
   // Changer de langue
   void _changeLanguage() {
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) => Container(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Choisir une langue',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 16),
-            ...List.generate(
-              _availableLanguages.length,
-              (index) => RadioListTile<String>(
-                title: Text(_availableLanguages[index]['name']!),
-                value: _availableLanguages[index]['code']!,
-                groupValue: _currentLanguage,
-                onChanged: (value) {
-                  setState(() {
-                    _currentLanguage = value!;
-                  });
-                  
-                  // Fermer la bottom sheet
-                  Navigator.pop(context);
-                  
-                  // Ici vous implémenteriez la logique pour changer la langue de l'app
-                  // Par exemple avec un package comme flutter_localizations
-                  
-                  // Afficher un message de confirmation
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Langue changée en ${_availableLanguages[index]['name']}'),
-                    ),
-                  );
-                },
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
+    try {
+      // Au lieu d'ouvrir une bottom sheet, naviguer vers l'écran de langue
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => const LanguageScreen()),
+      );
+    } catch (e) {
+      if (mounted) {
+        ErrorHandler.showErrorSnackBar(
+          context, 
+          e,
+          fallbackMessage: AppTranslations.text(context, 'error_changing_language'),
+        );
+      }
+    }
   }
   
   // Partager le profil
   void _shareProfile() {
     if (_currentUser == null) return;
     
-    final String message = """
-${_currentUser!.name.isNotEmpty ? _currentUser!.name : 'Utilisateur'} - ${_currentUser!.userType == 'client' ? 'Client' : 'Commerçant'}
+    try {
+      final String message = """
+${_currentUser!.name.isNotEmpty ? _currentUser!.name : AppTranslations.text(context, 'user')} - ${_currentUser!.userType == 'client' ? AppTranslations.text(context, 'client') : AppTranslations.text(context, 'vendor')}
 ${_currentUser!.email}
 
-Rejoignez-moi sur Commerce Connect !
+${AppTranslations.text(context, 'join_app')}
 """;
 
-    Share.share(message, subject: 'Mon profil Commerce Connect');
+      Share.share(message, subject: AppTranslations.text(context, 'my_profile'));
+    } catch (e) {
+      if (mounted) {
+        ErrorHandler.showErrorSnackBar(
+          context, 
+          e,
+          fallbackMessage: AppTranslations.text(context, 'error_sharing_profile'),
+        );
+      }
+    }
   }
   
   Future<void> _signOut() async {
-    // Afficher une boîte de dialogue de confirmation
-    final bool? confirm = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Déconnexion'),
-        content: const Text('Êtes-vous sûr de vouloir vous déconnecter ?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Annuler'),
-          ),
-          TextButton(
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Déconnexion'),
-          ),
-        ],
-      ),
-    );
-    
-    if (confirm != true) return;
-    
-    setState(() {
-      _isLoading = true;
-    });
-    
     try {
+      // Afficher une boîte de dialogue de confirmation
+      final bool? confirm = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Text(AppTranslations.text(context, 'logout')),
+          content: Text(AppTranslations.text(context, 'confirm_logout')),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: Text(AppTranslations.text(context, 'cancel')),
+            ),
+            TextButton(
+              style: TextButton.styleFrom(foregroundColor: Colors.red),
+              onPressed: () => Navigator.of(context).pop(true),
+              child: Text(AppTranslations.text(context, 'logout')),
+            ),
+          ],
+        ),
+      );
+      
+      if (confirm != true) return;
+      
+      setState(() {
+        _isLoading = true;
+      });
+      
       await _authService.signOut();
       
       // Rediriger vers l'écran de connexion
@@ -229,43 +248,44 @@ Rejoignez-moi sur Commerce Connect !
       setState(() {
         _isLoading = false;
       });
-      _showErrorSnackBar('Erreur lors de la déconnexion');
+      if (mounted) {
+        ErrorHandler.showErrorSnackBar(
+          context, 
+          e,
+          fallbackMessage: AppTranslations.text(context, 'error_logout'),
+          onRetry: _signOut,
+        );
+      }
     }
-  }
-  
-  void _showErrorSnackBar(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message)),
-    );
   }
   
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: widget.showAppBar ? AppBar(
-        title: const Text('Mon Profil'),
+        title: Text(AppTranslations.text(context, 'profile')),
         actions: [
           // Bouton de partage
           IconButton(
             icon: const Icon(Icons.share),
             onPressed: _shareProfile,
-            tooltip: 'Partager mon profil',
+            tooltip: AppTranslations.text(context, 'share_profile'),
           ),
           // Bouton d'actualisation
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: _loadUserData,
-            tooltip: 'Actualiser',
+            tooltip: AppTranslations.text(context, 'refresh'),
           ),
         ],
       ) : null,
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _currentUser == null
-              ? const Center(
+              ? Center(
                   child: Text(
-                    'Utilisateur non connecté',
-                    style: TextStyle(fontSize: 18),
+                    AppTranslations.text(context, 'user_not_connected'),
+                    style: const TextStyle(fontSize: 18),
                   ),
                 )
               : SingleChildScrollView(
@@ -330,7 +350,7 @@ Rejoignez-moi sur Commerce Connect !
                       Text(
                         _currentUser!.name.isNotEmpty
                             ? _currentUser!.name
-                            : 'Utilisateur',
+                            : AppTranslations.text(context, 'user'),
                         style: const TextStyle(
                           fontSize: 24,
                           fontWeight: FontWeight.bold,
@@ -364,8 +384,8 @@ Rejoignez-moi sur Commerce Connect !
                         ),
                         child: Text(
                           _currentUser!.userType == 'client'
-                              ? 'Client'
-                              : 'Commerçant',
+                              ? AppTranslations.text(context, 'client')
+                              : AppTranslations.text(context, 'vendor'),
                           style: const TextStyle(
                             color: Colors.white,
                             fontWeight: FontWeight.bold,
@@ -379,28 +399,28 @@ Rejoignez-moi sur Commerce Connect !
                       // Options de profil
                       ListTile(
                         leading: const Icon(Icons.edit, color: Colors.blue),
-                        title: const Text('Modifier le profil'),
+                        title: Text(AppTranslations.text(context, 'edit_profile')),
                         trailing: const Icon(Icons.arrow_forward_ios),
                         onTap: _editProfile,
                       ),
                       
                       ListTile(
                         leading: const Icon(Icons.settings, color: Colors.grey),
-                        title: const Text('Paramètres'),
+                        title: Text(AppTranslations.text(context, 'settings')),
                         trailing: const Icon(Icons.arrow_forward_ios),
                         onTap: _openSettings,
                       ),
                       
                       ListTile(
                         leading: const Icon(Icons.help, color: Colors.amber),
-                        title: const Text('Aide et support'),
+                        title: Text(AppTranslations.text(context, 'help_title')),
                         trailing: const Icon(Icons.arrow_forward_ios),
                         onTap: _openHelpAndSupport,
                       ),
                       
                       ListTile(
                         leading: const Icon(Icons.language, color: Colors.green),
-                        title: const Text('Changer de langue'),
+                        title: Text(AppTranslations.text(context, 'language')),
                         trailing: const Icon(Icons.arrow_forward_ios),
                         onTap: _changeLanguage,
                       ),
@@ -412,7 +432,7 @@ Rejoignez-moi sur Commerce Connect !
                       ElevatedButton.icon(
                         onPressed: _signOut,
                         icon: const Icon(Icons.logout),
-                        label: const Text('Se déconnecter'),
+                        label: Text(AppTranslations.text(context, 'logout')),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.red,
                           foregroundColor: Colors.white,

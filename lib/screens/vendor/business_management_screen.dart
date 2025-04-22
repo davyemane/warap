@@ -4,6 +4,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../models/business_model.dart';
 import '../../services/business_service.dart';
 import '../../services/auth_service.dart';
+import '../../l10n/translations.dart';
 import 'add_business_screen.dart';
 import 'edit_business_screen.dart';
 
@@ -48,7 +49,7 @@ class _BusinessManagementScreenState extends State<BusinessManagementScreen> {
       setState(() {
         _isLoading = false;
       });
-      _showErrorSnackBar('Erreur lors du chargement des commerces');
+      _showErrorSnackBar(AppTranslations.text(context, 'error_loading_businesses'));
     }
   }
   
@@ -63,10 +64,10 @@ class _BusinessManagementScreenState extends State<BusinessManagementScreen> {
       await _businessService.deleteBusiness(businessId);
       _loadBusinesses();
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Commerce supprimé avec succès')),
+        SnackBar(content: Text(AppTranslations.text(context, 'business_deleted'))),
       );
     } catch (e) {
-      _showErrorSnackBar('Erreur lors de la suppression du commerce');
+      _showErrorSnackBar(AppTranslations.text(context, 'error_deleting_business'));
     }
   }
   
@@ -75,7 +76,7 @@ class _BusinessManagementScreenState extends State<BusinessManagementScreen> {
       await _authService.signOut();
       Navigator.of(context).pushReplacementNamed('/login');
     } catch (e) {
-      _showErrorSnackBar('Erreur lors de la déconnexion');
+      _showErrorSnackBar(AppTranslations.text(context, 'error_logout'));
     }
   }
 
@@ -84,7 +85,7 @@ class _BusinessManagementScreenState extends State<BusinessManagementScreen> {
     return Scaffold(
       appBar: widget.showAppBar
           ? AppBar(
-              title: const Text('Mes Commerces'),
+              title: Text(AppTranslations.text(context, 'my_businesses')),
               actions: [
                 IconButton(
                   icon: const Icon(Icons.exit_to_app),
@@ -100,14 +101,14 @@ class _BusinessManagementScreenState extends State<BusinessManagementScreen> {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Text(
-                        'Vous n\'avez pas encore de commerce',
-                        style: TextStyle(fontSize: 18),
+                      Text(
+                        AppTranslations.text(context, 'no_businesses'),
+                        style: const TextStyle(fontSize: 18),
                       ),
                       const SizedBox(height: 16),
                       ElevatedButton(
                         onPressed: () => _navigateToAddBusiness(),
-                        child: const Text('Ajouter un commerce'),
+                        child: Text(AppTranslations.text(context, 'add_business_button')),
                       ),
                     ],
                   ),
@@ -161,12 +162,13 @@ class _BusinessManagementScreenState extends State<BusinessManagementScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Supprimer ce commerce ?'),
-        content: Text('Êtes-vous sûr de vouloir supprimer ${business.name} ?'),
+        title: Text(AppTranslations.text(context, 'delete_business')),
+        content: Text(AppTranslations.textWithParams(
+          context, 'confirm_delete', [business.name])),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Annuler'),
+            child: Text(AppTranslations.text(context, 'cancel')),
           ),
           TextButton(
             onPressed: () {
@@ -174,7 +176,7 @@ class _BusinessManagementScreenState extends State<BusinessManagementScreen> {
               _deleteBusiness(business.id);
             },
             style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('Supprimer'),
+            child: Text(AppTranslations.text(context, 'delete')),
           ),
         ],
       ),
@@ -217,7 +219,9 @@ class BusinessListItem extends StatelessWidget {
                 ),
                 Chip(
                   label: Text(
-                    business.businessType == 'fixe' ? 'Fixe' : 'Mobile',
+                    business.businessType == 'fixe' 
+                      ? AppTranslations.text(context, 'fixed_business') 
+                      : AppTranslations.text(context, 'mobile_business'),
                   ),
                   backgroundColor: business.businessType == 'fixe'
                       ? Colors.blue.shade100
@@ -228,21 +232,23 @@ class BusinessListItem extends StatelessWidget {
             const SizedBox(height: 8),
             Text(business.description),
             const SizedBox(height: 8),
-            Text('Heures: ${business.openingTime} - ${business.closingTime}'),
+            Text(AppTranslations.textWithParams(
+              context, 'hours', [business.openingTime, business.closingTime])),
             const SizedBox(height: 16),
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
                 TextButton.icon(
                   icon: const Icon(Icons.edit),
-                  label: const Text('Modifier'),
+                  label: Text(AppTranslations.text(context, 'edit')),
                   onPressed: onEdit,
                 ),
                 const SizedBox(width: 8),
                 TextButton.icon(
                   icon: const Icon(Icons.delete, color: Colors.red),
-                  label: const Text('Supprimer', 
-                    style: TextStyle(color: Colors.red),
+                  label: Text(
+                    AppTranslations.text(context, 'delete'),
+                    style: const TextStyle(color: Colors.red),
                   ),
                   onPressed: onDelete,
                 ),

@@ -1,9 +1,11 @@
-// Fichier screens/client/profile_screen.dart (même structure pour le vendeur)
+// Fichier screens/vendor/profile_screen.dart
 import 'package:flutter/material.dart';
 import '../../services/auth_service.dart';
 import '../../models/user_model.dart';
 import '../auth/login_screen.dart';
 import '../common/edit_profile_screen.dart';
+import '../../l10n/translations.dart';
+import 'vendor_settings_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({Key? key}) : super(key: key);
@@ -16,18 +18,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
   final AuthService _authService = AuthService();
   UserModel? _currentUser;
   bool _isLoading = true;
-  
+
   @override
   void initState() {
     super.initState();
     _loadUserData();
   }
-  
+
   Future<void> _loadUserData() async {
     setState(() {
       _isLoading = true;
     });
-    
+
     try {
       final user = await _authService.getCurrentUser();
       setState(() {
@@ -38,35 +40,36 @@ class _ProfileScreenState extends State<ProfileScreen> {
       setState(() {
         _isLoading = false;
       });
-      _showErrorSnackBar('Erreur lors du chargement des données utilisateur');
+      _showErrorSnackBar(
+          AppTranslations.text(context, 'error_loading_user_data'));
     }
   }
-  
+
   Future<void> _editProfile() async {
     if (_currentUser == null) return;
-    
+
     final updatedUser = await Navigator.push<UserModel>(
       context,
       MaterialPageRoute(
         builder: (context) => EditProfileScreen(user: _currentUser!),
       ),
     );
-    
+
     if (updatedUser != null) {
       setState(() {
         _currentUser = updatedUser;
       });
     }
   }
-  
+
   Future<void> _signOut() async {
     setState(() {
       _isLoading = true;
     });
-    
+
     try {
       await _authService.signOut();
-      
+
       // Rediriger vers l'écran de connexion
       if (!mounted) return;
       Navigator.of(context).pushAndRemoveUntil(
@@ -77,35 +80,36 @@ class _ProfileScreenState extends State<ProfileScreen> {
       setState(() {
         _isLoading = false;
       });
-      _showErrorSnackBar('Erreur lors de la déconnexion');
+      _showErrorSnackBar(AppTranslations.text(context, 'error_logout'));
     }
   }
-  
+
   void _showErrorSnackBar(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(message)),
     );
   }
-  
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Mon Profil'),
+        title: Text(AppTranslations.text(context, 'profile')),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: _loadUserData,
+            tooltip: AppTranslations.text(context, 'refresh'),
           ),
         ],
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _currentUser == null
-              ? const Center(
+              ? Center(
                   child: Text(
-                    'Utilisateur non connecté',
-                    style: TextStyle(fontSize: 18),
+                    AppTranslations.text(context, 'user_not_connected'),
+                    style: const TextStyle(fontSize: 18),
                   ),
                 )
               : SingleChildScrollView(
@@ -114,7 +118,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
                       const SizedBox(height: 20),
-                      
+
                       // Photo de profil avec possibilité de modification
                       Stack(
                         children: [
@@ -136,7 +140,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                   )
                                 : null,
                           ),
-                          
+
                           // Bouton de modification
                           Positioned(
                             bottom: 0,
@@ -163,22 +167,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           ),
                         ],
                       ),
-                      
+
                       const SizedBox(height: 24),
-                      
+
                       // Nom d'utilisateur
                       Text(
                         _currentUser!.name.isNotEmpty
                             ? _currentUser!.name
-                            : 'Utilisateur',
+                            : AppTranslations.text(context, 'user'),
                         style: const TextStyle(
                           fontSize: 24,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
-                      
+
                       const SizedBox(height: 8),
-                      
+
                       // Email
                       Text(
                         _currentUser!.email,
@@ -187,9 +191,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           color: Colors.grey,
                         ),
                       ),
-                      
+
                       const SizedBox(height: 16),
-                      
+
                       // Type d'utilisateur
                       Container(
                         padding: const EdgeInsets.symmetric(
@@ -204,73 +208,83 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         ),
                         child: Text(
                           _currentUser!.userType == 'client'
-                              ? 'Client'
-                              : 'Commerçant',
+                              ? AppTranslations.text(context, 'client')
+                              : AppTranslations.text(context, 'vendor'),
                           style: const TextStyle(
                             color: Colors.white,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
                       ),
-                      
+
                       const SizedBox(height: 32),
                       const Divider(),
-                      
+
                       // Options de profil
                       ListTile(
                         leading: const Icon(Icons.edit, color: Colors.blue),
-                        title: const Text('Modifier le profil'),
+                        title:
+                            Text(AppTranslations.text(context, 'edit_profile')),
                         trailing: const Icon(Icons.arrow_forward_ios),
                         onTap: _editProfile,
                       ),
-                      
+
                       ListTile(
                         leading: const Icon(Icons.settings, color: Colors.grey),
-                        title: const Text('Paramètres'),
+                        title: Text(AppTranslations.text(context, 'settings')),
                         trailing: const Icon(Icons.arrow_forward_ios),
                         onTap: () {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Fonctionnalité à venir'),
+                            SnackBar(
+                              content: Text(
+                                  AppTranslations.text(context, 'coming_soon')),
                             ),
                           );
                         },
                       ),
-                      
+
                       ListTile(
                         leading: const Icon(Icons.help, color: Colors.amber),
-                        title: const Text('Aide et support'),
+                        title:
+                            Text(AppTranslations.text(context, 'help_title')),
                         trailing: const Icon(Icons.arrow_forward_ios),
                         onTap: () {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Fonctionnalité à venir'),
+                            SnackBar(
+                              content: Text(
+                                  AppTranslations.text(context, 'coming_soon')),
                             ),
                           );
                         },
                       ),
-                      
+
                       ListTile(
-                        leading: const Icon(Icons.language, color: Colors.green),
-                        title: const Text('Changer de langue'),
+                        leading:
+                            const Icon(Icons.language, color: Colors.green),
+                        title: Text(AppTranslations.text(context, 'language')),
                         trailing: const Icon(Icons.arrow_forward_ios),
                         onTap: () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Fonctionnalité à venir'),
-                            ),
-                          );
+                          Navigator.pushNamed(context, '/language');
                         },
                       ),
-                      
+                      ListTile(
+                        leading: const Icon(Icons.settings_applications,
+                            color: Colors.orange),
+                        title: Text(
+                            AppTranslations.text(context, 'vendor_settings')),
+                        trailing: const Icon(Icons.arrow_forward_ios),
+                        onTap: () {
+                          Navigator.pushNamed(context, '/vendor/settings');
+                        },
+                      ),
                       const Divider(),
                       const SizedBox(height: 16),
-                      
+
                       // Bouton de déconnexion
                       ElevatedButton.icon(
                         onPressed: _signOut,
                         icon: const Icon(Icons.logout),
-                        label: const Text('Se déconnecter'),
+                        label: Text(AppTranslations.text(context, 'logout')),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.red,
                           foregroundColor: Colors.white,
@@ -280,7 +294,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           ),
                         ),
                       ),
-                      
+
                       const SizedBox(height: 32),
                     ],
                   ),

@@ -4,6 +4,7 @@ import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 import '../../models/user_model.dart';
 import '../../services/auth_service.dart';
+import '../../l10n/translations.dart';
 
 class EditProfileScreen extends StatefulWidget {
   final UserModel user;
@@ -54,7 +55,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         });
       }
     } catch (e) {
-      _showErrorSnackBar('Erreur lors de la sélection de l\'image');
+      _showErrorSnackBar(AppTranslations.text(context, 'error_selecting_image'));
     }
   }
 
@@ -75,7 +76,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         });
       }
     } catch (e) {
-      _showErrorSnackBar('Erreur lors de la prise de photo');
+      _showErrorSnackBar(AppTranslations.text(context, 'error_taking_photo'));
     }
   }
 
@@ -88,7 +89,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         children: [
           ListTile(
             leading: const Icon(Icons.photo_library),
-            title: const Text('Choisir depuis la galerie'),
+            title: Text(AppTranslations.text(context, 'choose_from_gallery')),
             onTap: () {
               Navigator.pop(context);
               _pickImage();
@@ -96,7 +97,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           ),
           ListTile(
             leading: const Icon(Icons.camera_alt),
-            title: const Text('Prendre une photo'),
+            title: Text(AppTranslations.text(context, 'take_photo')),
             onTap: () {
               Navigator.pop(context);
               _takePhoto();
@@ -105,13 +106,13 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           if (widget.user.hasProfileImage)
             ListTile(
               leading: const Icon(Icons.delete, color: Colors.red),
-              title: const Text('Supprimer la photo'),
+              title: Text(AppTranslations.text(context, 'delete_photo')),
               onTap: () {
                 Navigator.pop(context);
                 setState(() {
                   _imageFile = null;
                 });
-                _showSuccessSnackBar('Photo supprimée');
+                _showSuccessSnackBar(AppTranslations.text(context, 'photo_deleted'));
               },
             ),
         ],
@@ -156,7 +157,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       });
 
       if (!mounted) return;
-      _showSuccessSnackBar('Profil mis à jour avec succès');
+      _showSuccessSnackBar(AppTranslations.text(context, 'profile_updated'));
 
       // Revenir à l'écran précédent avec l'utilisateur mis à jour
       Navigator.pop(context, updatedUser);
@@ -164,7 +165,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       setState(() {
         _isLoading = false;
       });
-      _showErrorSnackBar('Erreur lors de la mise à jour du profil');
+      _showErrorSnackBar(AppTranslations.text(context, 'error_updating_profile'));
     }
   }
 
@@ -190,7 +191,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Modifier le profil'),
+        title: Text(AppTranslations.text(context, 'edit_profile')),
         actions: [
           // Bouton de sauvegarde
           TextButton(
@@ -204,9 +205,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                       color: Colors.white,
                     ),
                   )
-                : const Text(
-                    'Enregistrer',
-                    style: TextStyle(
+                : Text(
+                    AppTranslations.text(context, 'save'),
+                    style: const TextStyle(
                       color: Colors.white,
                       fontWeight: FontWeight.bold,
                     ),
@@ -323,15 +324,15 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     // Champ de texte pour le nom
                     TextFormField(
                       controller: _nameController,
-                      decoration: const InputDecoration(
-                        labelText: 'Nom complet',
-                        hintText: 'Entrez votre nom',
-                        prefixIcon: Icon(Icons.person),
-                        border: OutlineInputBorder(),
+                      decoration: InputDecoration(
+                        labelText: AppTranslations.text(context, 'full_name'),
+                        hintText: AppTranslations.text(context, 'enter_name'),
+                        prefixIcon: const Icon(Icons.person),
+                        border: const OutlineInputBorder(),
                       ),
                       validator: (value) {
                         if (value == null || value.isEmpty) {
-                          return 'Veuillez entrer votre nom';
+                          return AppTranslations.text(context, 'please_enter_name');
                         }
                         return null;
                       },
@@ -342,11 +343,11 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     TextFormField(
                       initialValue: widget.user.email,
                       enabled: false,
-                      decoration: const InputDecoration(
-                        labelText: 'Email',
-                        prefixIcon: Icon(Icons.email),
-                        border: OutlineInputBorder(),
-                        disabledBorder: OutlineInputBorder(
+                      decoration: InputDecoration(
+                        labelText: AppTranslations.text(context, 'email'),
+                        prefixIcon: const Icon(Icons.email),
+                        border: const OutlineInputBorder(),
+                        disabledBorder: const OutlineInputBorder(
                           borderSide: BorderSide(color: Colors.grey),
                         ),
                       ),
@@ -356,14 +357,14 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     // Type d'utilisateur (non modifiable)
                     TextFormField(
                       initialValue: widget.user.userType == 'client'
-                          ? 'Client'
-                          : 'Commerçant',
+                          ? AppTranslations.text(context, 'client')
+                          : AppTranslations.text(context, 'vendor'),
                       enabled: false,
-                      decoration: const InputDecoration(
-                        labelText: 'Type de compte',
-                        prefixIcon: Icon(Icons.badge),
-                        border: OutlineInputBorder(),
-                        disabledBorder: OutlineInputBorder(
+                      decoration: InputDecoration(
+                        labelText: AppTranslations.text(context, 'account_type'),
+                        prefixIcon: const Icon(Icons.badge),
+                        border: const OutlineInputBorder(),
+                        disabledBorder: const OutlineInputBorder(
                           borderSide: BorderSide(color: Colors.grey),
                         ),
                       ),

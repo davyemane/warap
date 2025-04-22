@@ -10,6 +10,6 @@ class AppConstants {
   static const double defaultLongitude = 0.0; // Remplacez par votre position par défaut
   
   // Textes
-  static const String appName = 'Commerce Connect';
+  static const String appName = 'Warap';
   static const String appTagline = 'Connectez-vous aux commerces près de chez vous';
 }

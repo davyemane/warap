@@ -1,4 +1,7 @@
+// Fichier screens/client/filter_screen.dart
 import 'package:flutter/material.dart';
+import '../../l10n/translations.dart';
+import '../../services/error_handler.dart'; // Ajout de l'import
 
 class FilterScreen extends StatefulWidget {
   final String? selectedType;
@@ -25,24 +28,54 @@ class _FilterScreenState extends State<FilterScreen> {
     _showOpenOnly = widget.showOpenOnly;
   }
 
+  void _applyFilters() {
+    try {
+      Navigator.pop(context, {
+        'selectedType': _selectedType,
+        'showOpenOnly': _showOpenOnly,
+      });
+    } catch (e) {
+      ErrorHandler.showErrorSnackBar(
+        context, 
+        e,
+        fallbackMessage: AppTranslations.text(context, 'error_applying_filters'),
+      );
+    }
+  }
+
+  void _resetFilters() {
+    try {
+      setState(() {
+        _selectedType = null;
+        _showOpenOnly = false;
+      });
+    } catch (e) {
+      ErrorHandler.showErrorSnackBar(
+        context, 
+        e,
+        fallbackMessage: AppTranslations.text(context, 'error_resetting_filters'),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Filtrer les commerces'),
+        title: Text(AppTranslations.text(context, 'filter_businesses')),
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Type de commerce',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            Text(
+              AppTranslations.text(context, 'business_type'),
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
             RadioListTile<String?>(
-              title: const Text('Tous les commerces'),
+              title: Text(AppTranslations.text(context, 'all_businesses')),
               value: null,
               groupValue: _selectedType,
               activeColor: Theme.of(context).primaryColor,
@@ -53,7 +86,7 @@ class _FilterScreenState extends State<FilterScreen> {
               },
             ),
             RadioListTile<String>(
-              title: const Text('Commerces fixes (boutiques)'),
+              title: Text(AppTranslations.text(context, 'fixed_businesses')),
               secondary: const Icon(Icons.store, color: Colors.blue),
               value: 'fixe',
               groupValue: _selectedType,
@@ -65,7 +98,7 @@ class _FilterScreenState extends State<FilterScreen> {
               },
             ),
             RadioListTile<String>(
-              title: const Text('Commerces mobiles (ambulants)'),
+              title: Text(AppTranslations.text(context, 'mobile_businesses')),
               secondary: const Icon(Icons.delivery_dining, color: Colors.green),
               value: 'mobile',
               groupValue: _selectedType,
@@ -81,12 +114,12 @@ class _FilterScreenState extends State<FilterScreen> {
             
             // Option pour afficher uniquement les commerces ouverts
             SwitchListTile(
-              title: const Text(
-                'Afficher uniquement les commerces ouverts',
-                style: TextStyle(fontWeight: FontWeight.bold),
+              title: Text(
+                AppTranslations.text(context, 'show_open_only'),
+                style: const TextStyle(fontWeight: FontWeight.bold),
               ),
-              subtitle: const Text(
-                'Masquer les commerces actuellement fermés'
+              subtitle: Text(
+                AppTranslations.text(context, 'hide_closed')
               ),
               value: _showOpenOnly,
               activeColor: Theme.of(context).primaryColor,
@@ -103,79 +136,24 @@ class _FilterScreenState extends State<FilterScreen> {
               children: [
                 Expanded(
                   child: OutlinedButton(
-                    onPressed: () {
-                      // Réinitialiser les filtres
-                      setState(() {
-                        _selectedType = null;
-                        _showOpenOnly = false;
-                      });
-                    },
+                    onPressed: _resetFilters,
                     style: OutlinedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 12),
                     ),
-                    child: const Text('Réinitialiser'),
+                    child: Text(AppTranslations.text(context, 'reset')),
                   ),
                 ),
                 const SizedBox(width: 16),
                 Expanded(
                   child: ElevatedButton(
-                    onPressed: () {
-                      Navigator.pop(context, {
-                        'selectedType': _selectedType,
-                        'showOpenOnly': _showOpenOnly,
-                      });
-                    },
+                    onPressed: _applyFilters,
                     style: ElevatedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 12),
                     ),
-                    child: const Text('Appliquer'),
+                    child: Text(AppTranslations.text(context, 'apply')),
                   ),
                 ),
               ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// Petit Widget pour les boutons d'action dans la bottom sheet
-class _ActionButton extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final Color color;
-  final VoidCallback onTap;
-
-  const _ActionButton({
-    required this.icon,
-    required this.label,
-    required this.color,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(8),
-      child: Padding(
-        padding: const EdgeInsets.all(8.0),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              icon,
-              color: color,
-              size: 28,
-            ),
-            const SizedBox(height: 4),
-            Text(
-              label,
-              style: TextStyle(
-                color: color,
-                fontWeight: FontWeight.bold,
-              ),
             ),
           ],
         ),

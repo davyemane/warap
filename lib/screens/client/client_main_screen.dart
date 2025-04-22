@@ -2,10 +2,12 @@
 import 'package:flutter/material.dart';
 import '../../widgets/common/bottom_navigation.dart';
 import '../../services/auth_service.dart';
+import '../../services/error_handler.dart'; // Ajout de l'import
 import '../../screens/client/map_screen.dart';
 import '../../screens/client/favorites_screen.dart';
 import '../../screens/client/search_screen.dart';
 import '../../screens/client/profile_screen.dart';
+import '../../l10n/translations.dart';
 
 class ClientMainScreen extends StatefulWidget {
   const ClientMainScreen({Key? key}) : super(key: key);
@@ -33,9 +35,19 @@ class _ClientMainScreenState extends State<ClientMainScreen> {
   }
   
   void _onTabTapped(int index) {
-    setState(() {
-      _currentIndex = index;
-    });
+    try {
+      setState(() {
+        _currentIndex = index;
+      });
+    } catch (e) {
+      if (mounted) {
+        ErrorHandler.showErrorSnackBar(
+          context, 
+          e,
+          fallbackMessage: AppTranslations.text(context, 'error_changing_tab'),
+        );
+      }
+    }
   }
 
   @override

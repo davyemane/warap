@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../l10n/translations.dart';
 
 class UserGuideScreen extends StatelessWidget {
   const UserGuideScreen({Key? key}) : super(key: key);
@@ -6,9 +7,9 @@ class UserGuideScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Guide d\'utilisation')),
-      body: const Center(
-        child: Text('Guide d\'utilisation de l\'application à venir...'),
+      appBar: AppBar(title: Text(AppTranslations.text(context, 'user_guide'))),
+      body: Center(
+        child: Text(AppTranslations.text(context, 'user_guide_coming')),
       ),
     );
   }

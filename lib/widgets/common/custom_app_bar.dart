@@ -2,7 +2,9 @@
 import 'package:flutter/material.dart';
 import '../../models/user_model.dart';
 import '../../services/auth_service.dart';
+import '../../services/error_handler.dart'; // Ajout de l'import
 import '../../screens/auth/login_screen.dart';
+import '../../l10n/translations.dart';
 
 class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
   final String title;
@@ -12,6 +14,9 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
   final VoidCallback? onBackPressed;
   final VoidCallback? onLogoPressed;
   final UserModel? currentUser;
+  final Color? backgroundColor;
+  final Color? foregroundColor;
+  final double elevation;
   
   const CustomAppBar({
     Key? key,
@@ -22,6 +27,9 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
     this.onBackPressed,
     this.onLogoPressed,
     this.currentUser,
+    this.backgroundColor,
+    this.foregroundColor,
+    this.elevation = 0,
   }) : super(key: key);
 
   @override
@@ -34,13 +42,16 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
         onTap: onLogoPressed,
         child: Text(
           title,
-          style: const TextStyle(
+          style: TextStyle(
             fontWeight: FontWeight.bold,
+            color: foregroundColor,
           ),
         ),
       ),
+      backgroundColor: backgroundColor,
+      foregroundColor: foregroundColor,
       centerTitle: true,
-      elevation: 0,
+      elevation: elevation,
       leading: showBackButton
           ? IconButton(
               icon: const Icon(Icons.arrow_back),
@@ -55,27 +66,47 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
         if (currentUser != null)
           Padding(
             padding: const EdgeInsets.only(right: 8.0),
-            child: GestureDetector(
-              onTap: () {
-                // Navigation vers le profil
-                Navigator.pushNamed(context, '/profile');
-              },
-              child: CircleAvatar(
-                radius: 16,
-                backgroundColor: Colors.grey.shade200,
-                backgroundImage: currentUser!.hasProfileImage
-                    ? NetworkImage(currentUser!.profileImageUrl!)
-                    : null,
-                child: !currentUser!.hasProfileImage
-                    ? Text(
-                        currentUser!.initials,
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          color: Theme.of(context).primaryColor,
+            child: Hero(
+              tag: 'profile-${currentUser?.id}',
+              child: Material(
+                type: MaterialType.transparency,
+                child: InkWell(
+                  onTap: () {
+                    // Navigation vers le profil
+                    Navigator.pushNamed(context, '/profile');
+                  },
+                  customBorder: const CircleBorder(),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 300),
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.1),
+                          blurRadius: 4,
+                          offset: const Offset(0, 2),
                         ),
-                      )
-                    : null,
+                      ],
+                    ),
+                    child: CircleAvatar(
+                      radius: 16,
+                      backgroundColor: Colors.grey.shade200,
+                      backgroundImage: currentUser!.hasProfileImage
+                          ? NetworkImage(currentUser!.profileImageUrl!)
+                          : null,
+                      child: !currentUser!.hasProfileImage
+                          ? Text(
+                              currentUser!.initials,
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                                color: Theme.of(context).primaryColor,
+                              ),
+                            )
+                          : null,
+                    ),
+                  ),
+                ),
               ),
             ),
           ),
@@ -91,16 +122,41 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
                 if (confirm == true) {
                   _handleLogout(context);
                 }
+              } else if (value == 'settings') {
+                Navigator.pushNamed(context, '/settings');
+              } else if (value == 'help') {
+                Navigator.pushNamed(context, '/help');
               }
             },
             itemBuilder: (context) => [
-              const PopupMenuItem<String>(
+              PopupMenuItem<String>(
+                value: 'settings',
+                child: Row(
+                  children: [
+                    const Icon(Icons.settings, color: Colors.grey),
+                    const SizedBox(width: 8),
+                    Text(AppTranslations.text(context, 'settings')),
+                  ],
+                ),
+              ),
+              PopupMenuItem<String>(
+                value: 'help',
+                child: Row(
+                  children: [
+                    const Icon(Icons.help, color: Colors.blue),
+                    const SizedBox(width: 8),
+                    Text(AppTranslations.text(context, 'help')),
+                  ],
+                ),
+              ),
+              const PopupMenuDivider(),
+              PopupMenuItem<String>(
                 value: 'logout',
                 child: Row(
                   children: [
-                    Icon(Icons.logout, color: Colors.red),
-                    SizedBox(width: 8),
-                    Text('Déconnexion'),
+                    const Icon(Icons.logout, color: Colors.red),
+                    const SizedBox(width: 8),
+                    Text(AppTranslations.text(context, 'logout')),
                   ],
                 ),
               ),
@@ -115,19 +171,19 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
     return showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Déconnexion'),
-        content: const Text('Êtes-vous sûr de vouloir vous déconnecter ?'),
+        title: Text(AppTranslations.text(context, 'logout')),
+        content: Text(AppTranslations.text(context, 'logout_question')),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Annuler'),
+            child: Text(AppTranslations.text(context, 'cancel')),
           ),
           TextButton(
             style: TextButton.styleFrom(
               foregroundColor: Colors.red,
             ),
             onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Déconnexion'),
+            child: Text(AppTranslations.text(context, 'logout')),
           ),
         ],
       ),
@@ -152,24 +208,28 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
       await authService.signOut();
       
       // Fermer l'indicateur de chargement
-      Navigator.pop(context);
+      if (context.mounted) Navigator.pop(context);
       
       // Rediriger vers l'écran de connexion
-      Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (context) => const LoginScreen()),
-        (route) => false,
-      );
+      if (context.mounted) {
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (context) => const LoginScreen()),
+          (route) => false,
+        );
+      }
     } catch (e) {
       // Fermer l'indicateur de chargement
-      Navigator.pop(context);
+      if (context.mounted) Navigator.pop(context);
       
-      // Afficher un message d'erreur
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Erreur lors de la déconnexion: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      // Afficher un message d'erreur avec ErrorHandler
+      if (context.mounted) {
+        ErrorHandler.showErrorSnackBar(
+          context, 
+          e,
+          fallbackMessage: AppTranslations.text(context, 'error_logout'),
+          onRetry: () => _handleLogout(context),
+        );
+      }
     }
   }
 }

@@ -5,6 +5,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../models/business_model.dart';
 import '../../services/business_service.dart';
 import '../../services/auth_service.dart';
+import '../../l10n/translations.dart';
 import 'package:share_plus/share_plus.dart';
 
 class StatisticsScreen extends StatefulWidget {
@@ -84,9 +85,9 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
   int get _businessCount => _vendorBusinesses.length;
   
   // Nombre de mises à jour (simulé)
-// Remplacez cette méthode qui cause l'erreur
-int get _updatesCount => _vendorBusinesses.fold(0, 
-    (sum, business) => sum + (business.updatedAt != null ? 1 : 0));  
+  int get _updatesCount => _vendorBusinesses.fold(0, 
+      (sum, business) => sum + (business.updatedAt != null ? 1 : 0));  
+  
   // Générer les données du graphique en fonction des commerces
   List<FlSpot> get _weeklyViewsData {
     // Dans une vraie application, ces données viendraient d'une base de données
@@ -122,41 +123,85 @@ int get _updatesCount => _vendorBusinesses.fold(0,
   // Fonction pour partager les statistiques
   void _shareStatistics() {
     final message = """
-Statistiques de mes commerces sur Commerce Connect
+${AppTranslations.text(context, 'my_statistics')}
 
-Vues totales: $_totalViews
-Favoris: $_totalFavorites
-Nombre de commerces: $_businessCount
+${AppTranslations.text(context, 'total_views')}: $_totalViews
+${AppTranslations.text(context, 'favorites')}: $_totalFavorites
+${AppTranslations.text(context, 'businesses')}: $_businessCount
 
-Mes commerces:
-${_vendorBusinesses.map((b) => "- ${b.name} (${b.businessType})").join('\n')}
+${AppTranslations.text(context, 'my_businesses')}:
+${_vendorBusinesses.map((b) => "- ${b.name} (${b.businessType == 'fixe' ? AppTranslations.text(context, 'fixed_business') : AppTranslations.text(context, 'mobile_business')})").join('\n')}
 
-Rejoignez Commerce Connect pour découvrir des commerces à proximité!
+${AppTranslations.text(context, 'discover_app')}
 """;
 
-    Share.share(message, subject: 'Mes statistiques sur Commerce Connect');
+    Share.share(message, subject: AppTranslations.text(context, 'my_statistics'));
   }
   
   // Fonction pour partager un commerce spécifique
-  void _shareBusiness(BusinessModel business) {
+  void _shareBusiness(BuildContext context, BusinessModel business) {
     final String message = """
 ${business.name}
-${business.businessType == 'fixe' ? 'Commerce fixe' : 'Commerce mobile'}
-${business.isOpenNow() ? 'Ouvert' : 'Fermé'} - Horaires: ${business.openingTime} - ${business.closingTime}
-${business.address.isNotEmpty ? 'Adresse: ${business.address}' : ''}
+${business.businessType == 'fixe' ? AppTranslations.text(context, 'fixed_business') : AppTranslations.text(context, 'mobile_business')}
+${business.isOpenNow() ? AppTranslations.text(context, 'open') : AppTranslations.text(context, 'closed')} - ${AppTranslations.text(context, 'opening_hours')}: ${business.openingTime} - ${business.closingTime}
+${business.address.isNotEmpty ? '${AppTranslations.text(context, 'address')}: ${business.address}' : ''}
 ${business.description.isNotEmpty ? '\n${business.description}' : ''}
 
-Découvrez ce commerce sur Commerce Connect!
+${AppTranslations.text(context, 'discover_app')}
 """;
 
-    Share.share(message, subject: 'Découvrez ${business.name}');
+    Share.share(message, subject: AppTranslations.textWithParams(
+        context, 'discover_business', [business.name]));
+  }
+
+  String _periodName(String period) {
+    switch (period) {
+      case 'Jour':
+        return AppTranslations.text(context, 'day');
+      case 'Semaine':
+        return AppTranslations.text(context, 'week');
+      case 'Mois':
+        return AppTranslations.text(context, 'month');
+      case 'Année':
+        return AppTranslations.text(context, 'year');
+      default:
+        return period;
+    }
+  }
+
+  String _getDayName(int value) {
+    switch (value) {
+      case 0:
+        return AppTranslations.text(context, 'days_mon');
+      case 1:
+        return AppTranslations.text(context, 'days_tue');
+      case 2:
+        return AppTranslations.text(context, 'days_wed');
+      case 3:
+        return AppTranslations.text(context, 'days_thu');
+      case 4:
+        return AppTranslations.text(context, 'days_fri');
+      case 5:
+        return AppTranslations.text(context, 'days_sat');
+      case 6:
+        return AppTranslations.text(context, 'days_sun');
+      default:
+        return '';
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    final List<String> periods = [
+      AppTranslations.text(context, 'day'),
+      AppTranslations.text(context, 'week'),
+      AppTranslations.text(context, 'month'),
+      AppTranslations.text(context, 'year')
+    ];
+    
     return Scaffold(
       appBar: widget.showAppBar ? AppBar(
-        title: const Text('Statistiques'),
+        title: Text(AppTranslations.text(context, 'statistics')),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
@@ -165,7 +210,7 @@ Découvrez ce commerce sur Commerce Connect!
           IconButton(
             icon: const Icon(Icons.share),
             onPressed: _shareStatistics,
-            tooltip: 'Partager les statistiques',
+            tooltip: AppTranslations.text(context, 'share_statistics'),
           ),
         ],
       ) : null,
@@ -180,24 +225,22 @@ Découvrez ce commerce sur Commerce Connect!
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text(
-                        'Vue d\'ensemble de votre activité',
-                        style: TextStyle(
+                      Text(
+                        AppTranslations.text(context, 'activity_overview'),
+                        style: const TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
                       // Dropdown pour sélectionner la période
                       DropdownButton<String>(
-                        value: _selectedPeriod,
+                        value: _periodName(_selectedPeriod),
                         underline: Container(),
                         icon: const Icon(Icons.keyboard_arrow_down),
-                        items: ['Jour', 'Semaine', 'Mois', 'Année']
-                            .map((period) => DropdownMenuItem<String>(
-                                  value: period,
-                                  child: Text(period),
-                                ))
-                            .toList(),
+                        items: periods.map((period) => DropdownMenuItem<String>(
+                              value: period,
+                              child: Text(period),
+                            )).toList(),
                         onChanged: (value) {
                           if (value != null) {
                             setState(() {
@@ -226,9 +269,9 @@ Découvrez ce commerce sur Commerce Connect!
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              const Text(
-                                'Visualisations',
-                                style: TextStyle(
+                              Text(
+                                AppTranslations.text(context, 'views'),
+                                style: const TextStyle(
                                   fontSize: 18,
                                   fontWeight: FontWeight.bold,
                                 ),
@@ -313,33 +356,8 @@ Découvrez ce commerce sur Commerce Connect!
                                           color: Colors.grey,
                                           fontSize: 12,
                                         );
-                                        String text;
-                                        switch (value.toInt()) {
-                                          case 0:
-                                            text = 'Lun';
-                                            break;
-                                          case 1:
-                                            text = 'Mar';
-                                            break;
-                                          case 2:
-                                            text = 'Mer';
-                                            break;
-                                          case 3:
-                                            text = 'Jeu';
-                                            break;
-                                          case 4:
-                                            text = 'Ven';
-                                            break;
-                                          case 5:
-                                            text = 'Sam';
-                                            break;
-                                          case 6:
-                                            text = 'Dim';
-                                            break;
-                                          default:
-                                            return Container();
-                                        }
-                                        return Text(text, style: style);
+                                        final dayName = _getDayName(value.toInt());
+                                        return Text(dayName, style: style);
                                       },
                                     ),
                                   ),
@@ -370,29 +388,28 @@ Découvrez ce commerce sur Commerce Connect!
                                   ),
                                 ],
                                 minY: 0,
-              lineTouchData: LineTouchData(
-                touchTooltipData: LineTouchTooltipData(
-                  // Suppression de la ligne problématique
-                  getTooltipItems: (touchedSpots) {
-                    return touchedSpots.map((touchedSpot) {
-                      return LineTooltipItem(
-                        '${touchedSpot.y.toInt()}',
-                        const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      );
-                    }).toList();
-                  },
-                ),
-              ),
-            ),
-          ),
-        ),
-      ],
-    ),
-  ),
-),
+                                lineTouchData: LineTouchData(
+                                  touchTooltipData: LineTouchTooltipData(
+                                    getTooltipItems: (touchedSpots) {
+                                      return touchedSpots.map((touchedSpot) {
+                                        return LineTooltipItem(
+                                          '${touchedSpot.y.toInt()}',
+                                          const TextStyle(
+                                            color: Colors.white,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        );
+                                      }).toList();
+                                    },
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
                   
                   const SizedBox(height: 24),
                   
@@ -401,7 +418,7 @@ Découvrez ce commerce sur Commerce Connect!
                     children: [
                       Expanded(
                         child: _StatCard(
-                          title: 'Vues totales',
+                          title: AppTranslations.text(context, 'total_views'),
                           value: _totalViews.toString(),
                           icon: Icons.visibility,
                           color: Colors.blue,
@@ -410,7 +427,7 @@ Découvrez ce commerce sur Commerce Connect!
                       const SizedBox(width: 16),
                       Expanded(
                         child: _StatCard(
-                          title: 'Favoris',
+                          title: AppTranslations.text(context, 'favorites'),
                           value: _totalFavorites.toString(),
                           icon: Icons.favorite,
                           color: Colors.red,
@@ -425,7 +442,7 @@ Découvrez ce commerce sur Commerce Connect!
                     children: [
                       Expanded(
                         child: _StatCard(
-                          title: 'Mises à jour',
+                          title: AppTranslations.text(context, 'updates'),
                           value: _updatesCount.toString(),
                           icon: Icons.update,
                           color: Colors.green,
@@ -434,7 +451,7 @@ Découvrez ce commerce sur Commerce Connect!
                       const SizedBox(width: 16),
                       Expanded(
                         child: _StatCard(
-                          title: 'Commerces',
+                          title: AppTranslations.text(context, 'businesses'),
                           value: _businessCount.toString(),
                           icon: Icons.store,
                           color: Colors.orange,
@@ -446,9 +463,9 @@ Découvrez ce commerce sur Commerce Connect!
                   const SizedBox(height: 24),
                   
                   // Section des commerces populaires
-                  const Text(
-                    'Commerces populaires',
-                    style: TextStyle(
+                  Text(
+                    AppTranslations.text(context, 'popular_businesses'),
+                    style: const TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
                     ),
@@ -456,10 +473,10 @@ Découvrez ce commerce sur Commerce Connect!
                   const SizedBox(height: 16),
                   
                   _vendorBusinesses.isEmpty
-                  ? const Center(
+                  ? Center(
                       child: Text(
-                        'Vous n\'avez pas encore de commerce',
-                        style: TextStyle(
+                        AppTranslations.text(context, 'no_businesses'),
+                        style: const TextStyle(
                           fontSize: 16,
                           color: Colors.grey,
                         ),
@@ -472,7 +489,7 @@ Découvrez ce commerce sur Commerce Connect!
                           business: business,
                           views: _viewsData[business.id]?.toString() ?? '0',
                           favorites: _favoritesData[business.id]?.toString() ?? '0',
-                          onSharePressed: () => _shareBusiness(business),
+                          onSharePressed: () => _shareBusiness(context, business),
                         ),
                       )).toList(),
                     ),
@@ -606,7 +623,7 @@ class _PopularBusinessCard extends StatelessWidget {
             IconButton(
               icon: const Icon(Icons.share, color: Colors.green),
               onPressed: onSharePressed,
-              tooltip: 'Partager ce commerce',
+              tooltip: AppTranslations.text(context, 'share_business'),
             ),
           ],
         ),

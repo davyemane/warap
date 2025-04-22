@@ -2,6 +2,10 @@
 import 'package:flutter/material.dart';
 import 'dart:math';
 import '../../services/auth_service.dart';
+import '../../services/error_handler.dart'; // Ajout de l'import
+import '../../l10n/translations.dart';
+import 'package:provider/provider.dart';
+import '../../providers/locale_provider.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({Key? key}) : super(key: key);
@@ -50,7 +54,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       // Afficher un message de succès
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Compte créé avec succès')),
+        SnackBar(content: Text(AppTranslations.text(context, 'account_created'))),
       );
       
       // Rediriger en fonction du type d'utilisateur
@@ -66,8 +70,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
       
       print('Erreur d\'inscription: $e');
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erreur: ${e.toString().substring(0, min(50, e.toString().length))}...')),
+      ErrorHandler.showErrorSnackBar(
+        context, 
+        e,
+        onRetry: _signUp,
       );
     }
   }
@@ -76,7 +82,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Inscription'),
+        title: Text(AppTranslations.text(context, 'register')),
       ),
       body: Center(
         child: SingleChildScrollView(
@@ -94,10 +100,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   color: Colors.blue,
                 ),
                 const SizedBox(height: 8),
-                const Text(
-                  'Créer un compte',
+                Text(
+                  AppTranslations.text(context, 'create_account'),
                   textAlign: TextAlign.center,
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontSize: 24,
                     fontWeight: FontWeight.bold,
                   ),
@@ -106,11 +112,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 
                 // Champ email
                 TextFormField(
-                  decoration: const InputDecoration(
-                    labelText: 'Email',
-                    prefixIcon: Icon(Icons.email),
-                    border: OutlineInputBorder(),
-                    hintText: 'exemple@email.com',
+                  decoration: InputDecoration(
+                    labelText: AppTranslations.text(context, 'email'),
+                    prefixIcon: const Icon(Icons.email),
+                    border: const OutlineInputBorder(),
+                    hintText: AppTranslations.text(context, 'email_hint'),
                   ),
                   keyboardType: TextInputType.emailAddress,
                   validator: (value) {
@@ -134,7 +140,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 // Champ mot de passe
                 TextFormField(
                   decoration: InputDecoration(
-                    labelText: 'Mot de passe',
+                    labelText: AppTranslations.text(context, 'password'),
                     prefixIcon: const Icon(Icons.lock),
                     suffixIcon: IconButton(
                       icon: Icon(
@@ -173,7 +179,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 // Champ confirmation mot de passe
                 TextFormField(
                   decoration: InputDecoration(
-                    labelText: 'Confirmer le mot de passe',
+                    labelText: AppTranslations.text(context, 'confirm_password'),
                     prefixIcon: const Icon(Icons.lock_outline),
                     suffixIcon: IconButton(
                       icon: Icon(
@@ -204,13 +210,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 const SizedBox(height: 24),
                 
                 // Type d'utilisateur
-                const Text(
-                  'Je suis :',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                Text(
+                  AppTranslations.text(context, 'user_type'),
+                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                 ),
                 RadioListTile<String>(
-                  title: const Text('Un client'),
-                  subtitle: const Text('Je souhaite découvrir des commerces à proximité'),
+                  title: Text(AppTranslations.text(context, 'client_type')),
+                  subtitle: Text(AppTranslations.text(context, 'client_desc')),
                   value: 'client',
                   groupValue: _userType,
                   onChanged: (value) {
@@ -220,8 +226,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   },
                 ),
                 RadioListTile<String>(
-                  title: const Text('Un commerçant'),
-                  subtitle: const Text('Je souhaite référencer mon commerce'),
+                  title: Text(AppTranslations.text(context, 'vendor_type')),
+                  subtitle: Text(AppTranslations.text(context, 'vendor_desc')),
                   value: 'vendeur',
                   groupValue: _userType,
                   onChanged: (value) {
@@ -243,9 +249,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             borderRadius: BorderRadius.circular(8),
                           ),
                         ),
-                        child: const Text(
-                          'S\'inscrire',
-                          style: TextStyle(fontSize: 16),
+                        child: Text(
+                          AppTranslations.text(context, 'sign_up'),
+                          style: const TextStyle(fontSize: 16),
                         ),
                       ),
                 const SizedBox(height: 16),
@@ -253,7 +259,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 // Lien retour connexion
                 TextButton(
                   onPressed: () => Navigator.pop(context),
-                  child: const Text('Déjà un compte ? Se connecter'),
+                  child: Text(AppTranslations.text(context, 'have_account')),
                 ),
               ],
             ),

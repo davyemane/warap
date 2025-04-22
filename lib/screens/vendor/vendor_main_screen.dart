@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import '../../widgets/common/bottom_navigation.dart';
 import '../../services/auth_service.dart';
+import '../../l10n/translations.dart';
 import 'business_management_screen.dart';
 import 'add_business_screen.dart';
 import 'statistics_screen.dart';
@@ -26,7 +27,7 @@ class _VendorMainScreenState extends State<VendorMainScreen> {
     super.initState();
     _screens = [
       const BusinessManagementScreen(showAppBar: false),
-      const AddBusinessScreen(),  // Vérifiez si AddBusinessScreen a un paramètre showAppBar
+      const AddBusinessScreen(),
       const StatisticsScreen(),
       const ProfileScreen(),
     ];

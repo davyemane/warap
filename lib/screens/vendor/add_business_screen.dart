@@ -5,6 +5,7 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../../models/business_model.dart';
 import '../../services/business_service.dart';
 import '../../services/location_service.dart';
+import '../../l10n/translations.dart';
 
 class AddBusinessScreen extends StatefulWidget {
   const AddBusinessScreen({Key? key}) : super(key: key);
@@ -62,7 +63,7 @@ class _AddBusinessScreenState extends State<AddBusinessScreen> {
       });
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Impossible d\'obtenir votre position actuelle')),
+        SnackBar(content: Text(AppTranslations.text(context, 'error_location'))),
       );
     }
   }
@@ -74,7 +75,7 @@ class _AddBusinessScreenState extends State<AddBusinessScreen> {
     
     if (!_locationSet) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Veuillez définir la position du commerce sur la carte')),
+        SnackBar(content: Text(AppTranslations.text(context, 'set_business_location'))),
       );
       return;
     }
@@ -110,7 +111,7 @@ class _AddBusinessScreenState extends State<AddBusinessScreen> {
       });
       
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Commerce ajouté avec succès')),
+        SnackBar(content: Text(AppTranslations.text(context, 'business_added'))),
       );
       
       Navigator.pop(context, true);
@@ -120,7 +121,7 @@ class _AddBusinessScreenState extends State<AddBusinessScreen> {
       });
       
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Erreur lors de l\'ajout du commerce')),
+        SnackBar(content: Text(AppTranslations.text(context, 'error_adding_business'))),
       );
     }
   }
@@ -129,7 +130,7 @@ class _AddBusinessScreenState extends State<AddBusinessScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Ajouter un commerce'),
+        title: Text(AppTranslations.text(context, 'add_business')),
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
@@ -142,13 +143,13 @@ class _AddBusinessScreenState extends State<AddBusinessScreen> {
                   children: [
                     // Nom du commerce
                     TextFormField(
-                      decoration: const InputDecoration(
-                        labelText: 'Nom du commerce',
-                        border: OutlineInputBorder(),
+                      decoration: InputDecoration(
+                        labelText: AppTranslations.text(context, 'business_name'),
+                        border: const OutlineInputBorder(),
                       ),
                       validator: (value) {
                         if (value == null || value.isEmpty) {
-                          return 'Veuillez entrer un nom';
+                          return AppTranslations.text(context, 'please_enter_name');
                         }
                         return null;
                       },
@@ -160,9 +161,9 @@ class _AddBusinessScreenState extends State<AddBusinessScreen> {
                     
                     // Description
                     TextFormField(
-                      decoration: const InputDecoration(
-                        labelText: 'Description',
-                        border: OutlineInputBorder(),
+                      decoration: InputDecoration(
+                        labelText: AppTranslations.text(context, 'description'),
+                        border: const OutlineInputBorder(),
                       ),
                       maxLines: 3,
                       onSaved: (value) {
@@ -172,12 +173,12 @@ class _AddBusinessScreenState extends State<AddBusinessScreen> {
                     const SizedBox(height: 16),
                     
                     // Type de commerce
-                    const Text(
-                      'Type de commerce',
-                      style: TextStyle(fontSize: 16),
+                    Text(
+                      AppTranslations.text(context, 'business_type'),
+                      style: const TextStyle(fontSize: 16),
                     ),
                     RadioListTile<String>(
-                      title: const Text('Commerce fixe (boutique)'),
+                      title: Text(AppTranslations.text(context, 'fixed_business_desc')),
                       value: 'fixe',
                       groupValue: _businessType,
                       onChanged: (value) {
@@ -187,7 +188,7 @@ class _AddBusinessScreenState extends State<AddBusinessScreen> {
                       },
                     ),
                     RadioListTile<String>(
-                      title: const Text('Commerce mobile (ambulant)'),
+                      title: Text(AppTranslations.text(context, 'mobile_business_desc')),
                       value: 'mobile',
                       groupValue: _businessType,
                       onChanged: (value) {
@@ -203,15 +204,15 @@ class _AddBusinessScreenState extends State<AddBusinessScreen> {
                       children: [
                         Expanded(
                           child: TextFormField(
-                            decoration: const InputDecoration(
-                              labelText: 'Heure d\'ouverture',
+                            decoration: InputDecoration(
+                              labelText: AppTranslations.text(context, 'opening_hours'),
                               hintText: 'HH:MM',
-                              border: OutlineInputBorder(),
+                              border: const OutlineInputBorder(),
                             ),
                             initialValue: _openingTime,
                             validator: (value) {
                               if (value == null || value.isEmpty) {
-                                return 'Requis';
+                                return AppTranslations.text(context, 'required');
                               }
                               return null;
                             },
@@ -223,15 +224,15 @@ class _AddBusinessScreenState extends State<AddBusinessScreen> {
                         const SizedBox(width: 16),
                         Expanded(
                           child: TextFormField(
-                            decoration: const InputDecoration(
-                              labelText: 'Heure de fermeture',
+                            decoration: InputDecoration(
+                              labelText: AppTranslations.text(context, 'closing_hours'),
                               hintText: 'HH:MM',
-                              border: OutlineInputBorder(),
+                              border: const OutlineInputBorder(),
                             ),
                             initialValue: _closingTime,
                             validator: (value) {
                               if (value == null || value.isEmpty) {
-                                return 'Requis';
+                                return AppTranslations.text(context, 'required');
                               }
                               return null;
                             },
@@ -246,9 +247,9 @@ class _AddBusinessScreenState extends State<AddBusinessScreen> {
                     
                     // Adresse
                     TextFormField(
-                      decoration: const InputDecoration(
-                        labelText: 'Adresse',
-                        border: OutlineInputBorder(),
+                      decoration: InputDecoration(
+                        labelText: AppTranslations.text(context, 'address'),
+                        border: const OutlineInputBorder(),
                       ),
                       onSaved: (value) {
                         _address = value ?? '';
@@ -258,9 +259,9 @@ class _AddBusinessScreenState extends State<AddBusinessScreen> {
                     
                     // Téléphone
                     TextFormField(
-                      decoration: const InputDecoration(
-                        labelText: 'Téléphone',
-                        border: OutlineInputBorder(),
+                      decoration: InputDecoration(
+                        labelText: AppTranslations.text(context, 'phone'),
+                        border: const OutlineInputBorder(),
                       ),
                       keyboardType: TextInputType.phone,
                       onSaved: (value) {
@@ -270,14 +271,14 @@ class _AddBusinessScreenState extends State<AddBusinessScreen> {
                     const SizedBox(height: 24),
                     
                     // Position sur la carte
-                    const Text(
-                      'Position sur la carte',
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    Text(
+                      AppTranslations.text(context, 'map_position'),
+                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(height: 8),
-                    const Text(
-                      'Appuyez longuement sur la carte pour définir la position de votre commerce.',
-                      style: TextStyle(fontSize: 14, color: Colors.grey),
+                    Text(
+                      AppTranslations.text(context, 'map_instructions'),
+                      style: const TextStyle(fontSize: 14, color: Colors.grey),
                     ),
                     const SizedBox(height: 16),
                     SizedBox(
@@ -312,7 +313,7 @@ class _AddBusinessScreenState extends State<AddBusinessScreen> {
                         style: ElevatedButton.styleFrom(
                           padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
                         ),
-                        child: const Text('Enregistrer', style: TextStyle(fontSize: 16)),
+                        child: Text(AppTranslations.text(context, 'save'), style: const TextStyle(fontSize: 16)),
                       ),
                     ),
                     const SizedBox(height: 32),

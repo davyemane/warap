@@ -2,7 +2,9 @@
 import 'package:flutter/material.dart';
 import '../../models/business_model.dart';
 import '../../services/business_service.dart';
+import '../../services/error_handler.dart'; // Ajout de l'import
 import 'business_details_screen.dart';
+import '../../l10n/translations.dart';
 
 class SearchScreen extends StatefulWidget {
   const SearchScreen({Key? key}) : super(key: key);
@@ -48,41 +50,75 @@ class _SearchScreenState extends State<SearchScreen> {
       setState(() {
         _isLoading = false;
       });
-      _showErrorSnackBar('Erreur lors du chargement des commerces');
+      if (mounted) {
+        ErrorHandler.showErrorSnackBar(
+          context, 
+          e,
+          fallbackMessage: AppTranslations.text(context, 'error_loading_businesses'),
+          onRetry: _loadBusinesses,
+        );
+      }
     }
   }
   
   void _applySearch() {
-    if (_searchQuery.isEmpty) {
-      _filteredBusinesses = _allBusinesses;
-      return;
+    try {
+      if (_searchQuery.isEmpty) {
+        setState(() {
+          _filteredBusinesses = _allBusinesses;
+        });
+        return;
+      }
+      
+      setState(() {
+        _filteredBusinesses = _allBusinesses.where((business) {
+          final name = business.name.toLowerCase();
+          final description = business.description.toLowerCase();
+          final address = business.address.toLowerCase();
+          final query = _searchQuery.toLowerCase();
+          
+          return name.contains(query) ||
+                description.contains(query) ||
+                address.contains(query);
+        }).toList();
+      });
+    } catch (e) {
+      if (mounted) {
+        ErrorHandler.showErrorSnackBar(
+          context, 
+          e,
+          fallbackMessage: AppTranslations.text(context, 'error_searching'),
+        );
+      }
     }
-    
-    setState(() {
-      _filteredBusinesses = _allBusinesses.where((business) {
-        final name = business.name.toLowerCase();
-        final description = business.description.toLowerCase();
-        final address = business.address.toLowerCase();
-        final query = _searchQuery.toLowerCase();
-        
-        return name.contains(query) ||
-               description.contains(query) ||
-               address.contains(query);
-      }).toList();
-    });
   }
   
-  void _showErrorSnackBar(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message)),
-    );
+  void _navigateToBusinessDetails(BusinessModel business) {
+    try {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => BusinessDetailsScreen(
+            business: business,
+          ),
+        ),
+      );
+    } catch (e) {
+      if (mounted) {
+        ErrorHandler.showErrorSnackBar(
+          context, 
+          e,
+          fallbackMessage: AppTranslations.text(context, 'error_opening_details'),
+        );
+      }
+    }
   }
   
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Rechercher'),
+        title: Text(AppTranslations.text(context, 'search')),
       ),
       body: Column(
         children: [
@@ -91,8 +127,8 @@ class _SearchScreenState extends State<SearchScreen> {
             child: TextField(
               controller: _searchController,
               decoration: InputDecoration(
-                labelText: 'Rechercher un commerce',
-                hintText: 'Nom, description, adresse...',
+                labelText: AppTranslations.text(context, 'search_business'),
+                hintText: AppTranslations.text(context, 'search_hint'),
                 prefixIcon: const Icon(Icons.search),
                 suffixIcon: _searchQuery.isNotEmpty
                     ? IconButton(
@@ -122,10 +158,10 @@ class _SearchScreenState extends State<SearchScreen> {
             child: _isLoading
                 ? const Center(child: CircularProgressIndicator())
                 : _filteredBusinesses.isEmpty
-                    ? const Center(
+                    ? Center(
                         child: Text(
-                          'Aucun résultat trouvé',
-                          style: TextStyle(fontSize: 18),
+                          AppTranslations.text(context, 'no_results'),
+                          style: const TextStyle(fontSize: 18),
                         ),
                       )
                     : ListView.builder(
@@ -155,20 +191,11 @@ class _SearchScreenState extends State<SearchScreen> {
                               ),
                               subtitle: Text(
                                 business.isOpenNow()
-                                    ? 'Ouvert • ${business.address}'
-                                    : 'Fermé • ${business.address}',
+                                    ? '${AppTranslations.text(context, 'open')} • ${business.address}'
+                                    : '${AppTranslations.text(context, 'closed')} • ${business.address}',
                               ),
                               trailing: const Icon(Icons.arrow_forward_ios),
-                              onTap: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) => BusinessDetailsScreen(
-                                      business: business,
-                                    ),
-                                  ),
-                                );
-                              },
+                              onTap: () => _navigateToBusinessDetails(business),
                             ),
                           );
                         },

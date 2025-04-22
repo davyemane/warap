@@ -1,16 +1,22 @@
 // Fichier main.dart
+// Fichier main.dart
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'config/supabase_config.dart';
 import 'config/app_theme.dart';
+import 'providers/locale_provider.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/auth/register_screen.dart';
 import 'screens/client/map_screen.dart';
 import 'screens/vendor/business_management_screen.dart';
 import 'screens/client/client_main_screen.dart';
 import 'screens/vendor/vendor_main_screen.dart';
+import 'screens/common/language_screen.dart';
 import 'services/auth_service.dart';
+import 'screens/vendor/vendor_settings_screen.dart';
+// Ne PAS importer flutter_localizations
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -33,7 +39,13 @@ void main() async {
     anonKey: SupabaseConfig.anonKey,
   );
 
-  runApp(const MyApp());
+  runApp(
+    ChangeNotifierProvider(
+      create: (context) =>
+          LocaleProvider(Locale('fr')), // or your default locale
+      child: const MyApp(),
+    ),
+  );
 }
 
 class MyApp extends StatelessWidget {
@@ -41,18 +53,25 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Warap',
-      debugShowCheckedModeBanner: false, // Supprimer le bandeau "Debug"
-      theme: AppTheme.lightTheme(), // Utiliser notre thème personnalisé
-      home: const SplashScreen(),
-      routes: {
-        '/login': (context) => const LoginScreen(),
-        '/register': (context) => const RegisterScreen(),
-        '/client': (context) => const ClientMainScreen(),
-        '/client/map': (context) => const ClientMapScreen(),
-        '/vendor': (context) => const VendorMainScreen(),
-        '/vendor/businesses': (context) =>const BusinessManagementScreen(), 
+    return Consumer<LocaleProvider>(
+      builder: (context, localeProvider, child) {
+        return MaterialApp(
+          title: 'Warap',
+          debugShowCheckedModeBanner: false,
+          theme: AppTheme.lightTheme(),
+          // Ne pas inclure les paramètres de localisation qui utilisent flutter_localizations
+          home: const SplashScreen(),
+          routes: {
+            '/login': (context) => const LoginScreen(),
+            '/register': (context) => const RegisterScreen(),
+            '/client': (context) => const ClientMainScreen(),
+            '/client/map': (context) => const ClientMapScreen(),
+            '/vendor': (context) => const VendorMainScreen(),
+            '/vendor/businesses': (context) => const BusinessManagementScreen(),
+            '/language': (context) => const LanguageScreen(),
+            '/vendor/settings': (context) => const VendorSettingsScreen(),
+          },
+        );
       },
     );
   }
@@ -173,7 +192,7 @@ class _SplashScreenState extends State<SplashScreen>
               const SizedBox(height: 24),
               // Nom de l'application
               const Text(
-                'Commerce Connect',
+                'Warap',
                 style: TextStyle(
                   fontSize: 32,
                   fontWeight: FontWeight.bold,
