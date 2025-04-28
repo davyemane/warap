@@ -1,9 +1,33 @@
 // Fichier main.dart
-// Fichier main.dart
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:warap/models/business_model.dart';
+import 'package:warap/models/cart_item_model.dart';
+import 'package:warap/models/product_model.dart';
+import 'package:warap/models/service_request_model.dart';
+import 'package:warap/screens/client/business_details_screen.dart';
+import 'package:warap/screens/client/cart_screen.dart';
+import 'package:warap/screens/client/checkout_screen.dart';
+import 'package:warap/screens/client/favorites_screen.dart';
+import 'package:warap/screens/client/new_request_screen.dart';
+import 'package:warap/screens/client/order_details_screen.dart';
+import 'package:warap/screens/client/product_detail_screen.dart';
+import 'package:warap/screens/client/search_screen.dart';
+import 'package:warap/screens/client/request_service_history_screen.dart';
+import 'package:warap/screens/vendor/add_business_screen.dart';
+import 'package:warap/screens/vendor/add_product_screen.dart';
+import 'package:warap/screens/vendor/business_list_screen.dart';
+import 'package:warap/screens/vendor/client_list_screen.dart';
+import 'package:warap/screens/vendor/edit_product_screen.dart';
+import 'package:warap/screens/vendor/orders_screen.dart';
+import 'package:warap/screens/vendor/request_detail_screen.dart';
+import 'package:warap/screens/vendor/service_requests_screen.dart';
+import 'package:warap/screens/vendor/vendor_dashboard_screen.dart';
+import 'package:warap/screens/vendor/business_detail_screen.dart';
+import 'package:warap/screens/vendor/order_detail_screen.dart';
+import 'package:warap/screens/vendor/product_list_screen.dart';
 import 'config/supabase_config.dart';
 import 'config/app_theme.dart';
 import 'providers/locale_provider.dart';
@@ -15,8 +39,10 @@ import 'screens/client/client_main_screen.dart';
 import 'screens/vendor/vendor_main_screen.dart';
 import 'screens/common/language_screen.dart';
 import 'services/auth_service.dart';
+import 'services/user_access_service.dart';
 import 'screens/vendor/vendor_settings_screen.dart';
-// Ne PAS importer flutter_localizations
+import 'screens/vendor/profile_screen.dart' as vendor_profile;
+import 'screens/client/profile_screen.dart' as client_profile;
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -42,7 +68,7 @@ void main() async {
   runApp(
     ChangeNotifierProvider(
       create: (context) =>
-          LocaleProvider(Locale('fr')), // or your default locale
+          LocaleProvider(const Locale('fr')), // or your default locale
       child: const MyApp(),
     ),
   );
@@ -53,6 +79,9 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Initialiser le service de contrôle d'accès
+    final UserAccessService userAccessService = UserAccessService();
+    
     return Consumer<LocaleProvider>(
       builder: (context, localeProvider, child) {
         return MaterialApp(
@@ -66,14 +95,105 @@ class MyApp extends StatelessWidget {
             '/register': (context) => const RegisterScreen(),
             '/client': (context) => const ClientMainScreen(),
             '/client/map': (context) => const ClientMapScreen(),
+            '/client/favorites': (context) => const FavoritesScreen(),
+            '/client/search': (context) => const SearchScreen(),
+            '/client/profile': (context) => const client_profile.ProfileScreen(),
+            '/client/cart': (context) => const CartScreen(),
+            '/client/new-request': (context) => const NewRequestScreen(),
+            '/client/service-history': (context) => const RequestServiceHistoryScreen(),
+
             '/vendor': (context) => const VendorMainScreen(),
-            '/vendor/businesses': (context) => const BusinessManagementScreen(),
             '/language': (context) => const LanguageScreen(),
             '/vendor/settings': (context) => const VendorSettingsScreen(),
+            '/vendor/dashboard': (context) => const VendorDashboardScreen(),
+            '/vendor/businesses': (context) => const BusinessListScreen(),
+            '/vendor/add-business': (context) => const AddBusinessScreen(),
+            '/vendor/orders': (context) => const OrdersScreen(),
+            '/vendor/requests': (context) => const ServiceRequestsScreen(),
+            '/vendor/clients': (context) => const ClientListScreen(),
+            '/vendor/profile': (context) => const vendor_profile.ProfileScreen(),
           },
+          // Utiliser le middleware de contrôle d'accès
+          onGenerateRoute: (settings) => userAccessService.onGenerateRoute(
+            settings, 
+            (routeSettings) => _generateRoute(routeSettings)
+          ),
         );
       },
     );
+  }
+}
+
+// Fonction pour générer les routes avec arguments
+Route<dynamic>? _generateRoute(RouteSettings settings) {
+  switch (settings.name) {
+    // Routes côté vendeur
+    case '/vendor/business-detail':
+      final business = settings.arguments as dynamic;
+      return MaterialPageRoute(
+        builder: (context) => BusinessDetailScreen(business: business),
+      );
+    case '/vendor/order-detail':
+      final orderId = settings.arguments as String;
+      return MaterialPageRoute(
+        builder: (context) => OrderDetailScreen(orderId: orderId),
+      );
+    case '/vendor/products':
+      final business = settings.arguments as dynamic;
+      return MaterialPageRoute(
+        builder: (context) => ProductListScreen(business: business),
+      );
+    case '/vendor/add-product':
+      final business = settings.arguments as BusinessModel;
+      return MaterialPageRoute(
+        builder: (context) => AddProductScreen(business: business),
+      );
+    case '/vendor/edit-product':
+      final product = settings.arguments as ProductModel;
+      return MaterialPageRoute(
+        builder: (context) => EditProductScreen(product: product),
+      );
+    case '/vendor/request-detail':
+      final request = settings.arguments as ServiceRequestModel;
+      return MaterialPageRoute(
+        builder: (context) => RequestDetailScreen(request: request),
+      );
+    case '/vendor/client-map':
+      return MaterialPageRoute(
+        builder: (context) => const ClientMapScreen(),
+      );
+    
+    // Routes côté client
+    case '/client/business-detail':
+      final business = settings.arguments as BusinessModel;
+      return MaterialPageRoute(
+        builder: (context) => BusinessDetailsScreen(business: business),
+      );
+    case '/client/product-detail':
+      final product = settings.arguments as ProductModel;
+      return MaterialPageRoute(
+        builder: (context) => ProductDetailScreen(product: product),
+      );
+    case '/client/order-detail':
+      final orderId = settings.arguments as String;
+      return MaterialPageRoute(
+        builder: (context) => OrderDetailsScreen(orderId: orderId),
+      );
+    case '/client/request-detail':
+      final request = settings.arguments as ServiceRequestModel;
+      return MaterialPageRoute(
+        builder: (context) => RequestDetailScreen(request: request),
+      );
+    case '/client/checkout':
+      final args = settings.arguments as Map<String, dynamic>;
+      return MaterialPageRoute(
+        builder: (context) => CheckoutScreen(
+          cartItems: args['cartItems'] as List<CartItemModel>,
+          business: args['business'] as BusinessModel,
+        ),
+      );
+    default:
+      return null;
   }
 }
 

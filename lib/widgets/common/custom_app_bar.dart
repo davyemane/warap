@@ -1,12 +1,20 @@
 // Fichier widgets/common/custom_app_bar.dart
 import 'package:flutter/material.dart';
+import 'package:badges/badges.dart' as badges; // Ajoutez cette dépendance
 import '../../models/user_model.dart';
 import '../../services/auth_service.dart';
-import '../../services/error_handler.dart'; // Ajout de l'import
+import '../../services/error_handler.dart';
+import '../../services/notification_service.dart'; // Nouveau service
+import '../../services/cart_service.dart'; // Pour l'indicateur du panier
+import '../../services/order_service.dart'; // Pour les nouvelles commandes
 import '../../screens/auth/login_screen.dart';
+import '../../screens/client/cart_screen.dart';
+import '../../screens/client/request_service_history_screen.dart';
+import '../../screens/vendor/new_orders_screen.dart';
+import '../../utils/theme.dart';
 import '../../l10n/translations.dart';
 
-class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
+class CustomAppBar extends StatefulWidget implements PreferredSizeWidget {
   final String title;
   final List<Widget>? actions;
   final bool showBackButton;
@@ -36,38 +44,193 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
   Size get preferredSize => const Size.fromHeight(kToolbarHeight);
 
   @override
+  State<CustomAppBar> createState() => _CustomAppBarState();
+}
+
+class _CustomAppBarState extends State<CustomAppBar> {
+  final AuthService _authService = AuthService();
+  final CartService _cartService = CartService();
+  final OrderService _orderService = OrderService();
+  final NotificationService _notificationService = NotificationService();
+  
+  int _cartItemCount = 0;
+  int _orderNotifications = 0;
+  int _requestNotifications = 0;
+  bool _isLoading = false;
+  
+  @override
+  void initState() {
+    super.initState();
+    _loadData();
+  }
+  
+  @override
+  void didUpdateWidget(CustomAppBar oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.currentUser?.id != widget.currentUser?.id) {
+      _loadData();
+    }
+  }
+  
+  Future<void> _loadData() async {
+    if (widget.currentUser == null) return;
+    
+    setState(() {
+      _isLoading = true;
+    });
+    
+    try {
+      // Pour les clients, chargement du panier et des notifications
+      if (widget.currentUser!.userType == 'client') {
+        final cartItems = await _cartService.getCart();
+        final notifications = await _notificationService.getClientNotifications();
+        
+        setState(() {
+          _cartItemCount = cartItems.length;
+          _requestNotifications = notifications.where((n) => n.type == 'request').length;
+          _isLoading = false;
+        });
+      } 
+      // Pour les vendeurs, chargement des nouvelles commandes/demandes
+      else {
+        final pendingOrders = await _orderService.getPendingOrdersCount();
+        final pendingRequests = await _notificationService.getVendorRequestsCount();
+        
+        setState(() {
+          _orderNotifications = pendingOrders;
+          _requestNotifications = pendingRequests;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+      });
+      
+      if (mounted) {
+        ErrorHandler.showErrorSnackBar(
+          context, 
+          e,
+          fallbackMessage: AppTranslations.text(context, 'error_loading_notifications'),
+        );
+      }
+    }
+  }
+  
+  void _navigateToCart() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const CartScreen()),
+    ).then((_) => _loadData());
+  }
+  
+  void _navigateToRequestHistory() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const RequestServiceHistoryScreen()),
+    ).then((_) => _loadData());
+  }
+  
+  void _navigateToNewOrders() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const NewOrdersScreen()),
+    ).then((_) => _loadData());
+  }
+
+  @override
   Widget build(BuildContext context) {
     return AppBar(
       title: GestureDetector(
-        onTap: onLogoPressed,
+        onTap: widget.onLogoPressed,
         child: Text(
-          title,
+          widget.title,
           style: TextStyle(
             fontWeight: FontWeight.bold,
-            color: foregroundColor,
+            color: widget.foregroundColor,
           ),
         ),
       ),
-      backgroundColor: backgroundColor,
-      foregroundColor: foregroundColor,
+      backgroundColor: widget.backgroundColor,
+      foregroundColor: widget.foregroundColor,
       centerTitle: true,
-      elevation: elevation,
-      leading: showBackButton
+      elevation: widget.elevation,
+      leading: widget.showBackButton
           ? IconButton(
               icon: const Icon(Icons.arrow_back),
-              onPressed: onBackPressed ?? () => Navigator.of(context).pop(),
+              onPressed: widget.onBackPressed ?? () => Navigator.of(context).pop(),
             )
           : null,
       actions: [
+        // Bouton du panier pour les clients
+        if (widget.currentUser != null && widget.currentUser!.userType == 'client')
+          badges.Badge(
+            showBadge: _cartItemCount > 0,
+            badgeContent: Text(
+              _cartItemCount.toString(),
+              style: const TextStyle(color: Colors.white, fontSize: 10),
+            ),
+            position: badges.BadgePosition.topEnd(top: 4, end: 4),
+            badgeStyle: const badges.BadgeStyle(
+              badgeColor: Colors.red,
+              padding: EdgeInsets.all(4),
+            ),
+            child: IconButton(
+              icon: const Icon(Icons.shopping_cart),
+              onPressed: _navigateToCart,
+              tooltip: AppTranslations.text(context, 'cart'),
+            ),
+          ),
+        
+        // Bouton d'historique des demandes pour les clients
+        if (widget.currentUser != null && widget.currentUser!.userType == 'client')
+          badges.Badge(
+            showBadge: _requestNotifications > 0,
+            badgeContent: Text(
+              _requestNotifications.toString(),
+              style: const TextStyle(color: Colors.white, fontSize: 10),
+            ),
+            position: badges.BadgePosition.topEnd(top: 4, end: 4),
+            badgeStyle: const badges.BadgeStyle(
+              badgeColor: Colors.orange,
+              padding: EdgeInsets.all(4),
+            ),
+            child: IconButton(
+              icon: const Icon(Icons.history),
+              onPressed: _navigateToRequestHistory,
+              tooltip: AppTranslations.text(context, 'service_requests'),
+            ),
+          ),
+        
+        // Bouton des nouvelles commandes pour les vendeurs
+        if (widget.currentUser != null && widget.currentUser!.userType != 'client')
+          badges.Badge(
+            showBadge: _orderNotifications > 0 || _requestNotifications > 0,
+            badgeContent: Text(
+              (_orderNotifications + _requestNotifications).toString(),
+              style: const TextStyle(color: Colors.white, fontSize: 10),
+            ),
+            position: badges.BadgePosition.topEnd(top: 4, end: 4),
+            badgeStyle: const badges.BadgeStyle(
+              badgeColor: Colors.red,
+              padding: EdgeInsets.all(4),
+            ),
+            child: IconButton(
+              icon: const Icon(Icons.notifications),
+              onPressed: _navigateToNewOrders,
+              tooltip: AppTranslations.text(context, 'new_orders'),
+            ),
+          ),
+          
         // Actions personnalisées
-        ...?actions,
+        ...?widget.actions,
         
         // Bouton de profil avec photo ou initiales
-        if (currentUser != null)
+        if (widget.currentUser != null)
           Padding(
             padding: const EdgeInsets.only(right: 8.0),
             child: Hero(
-              tag: 'profile-${currentUser?.id}',
+              tag: 'profile-${widget.currentUser?.id}',
               child: Material(
                 type: MaterialType.transparency,
                 child: InkWell(
@@ -91,12 +254,12 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
                     child: CircleAvatar(
                       radius: 16,
                       backgroundColor: Colors.grey.shade200,
-                      backgroundImage: currentUser!.hasProfileImage
-                          ? NetworkImage(currentUser!.profileImageUrl!)
+                      backgroundImage: widget.currentUser!.hasProfileImage
+                          ? NetworkImage(widget.currentUser!.profileImageUrl!)
                           : null,
-                      child: !currentUser!.hasProfileImage
+                      child: !widget.currentUser!.hasProfileImage
                           ? Text(
-                              currentUser!.initials,
+                              widget.currentUser!.initials,
                               style: TextStyle(
                                 fontSize: 12,
                                 fontWeight: FontWeight.bold,
@@ -111,8 +274,8 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
             ),
           ),
         
-        // Bouton de déconnexion
-        if (showLogoutButton)
+        // Menu de déconnexion et options
+        if (widget.showLogoutButton)
           PopupMenuButton<String>(
             icon: const Icon(Icons.more_vert),
             onSelected: (value) async {
@@ -126,9 +289,22 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
                 Navigator.pushNamed(context, '/settings');
               } else if (value == 'help') {
                 Navigator.pushNamed(context, '/help');
+              } else if (value == 'dashboard' && widget.currentUser?.userType != 'client') {
+                Navigator.pushNamed(context, '/vendor/dashboard');
               }
             },
             itemBuilder: (context) => [
+              if (widget.currentUser?.userType != 'client')
+                PopupMenuItem<String>(
+                  value: 'dashboard',
+                  child: Row(
+                    children: [
+                      const Icon(Icons.dashboard, color: AppTheme.primaryColor),
+                      const SizedBox(width: 8),
+                      Text(AppTranslations.text(context, 'dashboard')),
+                    ],
+                  ),
+                ),
               PopupMenuItem<String>(
                 value: 'settings',
                 child: Row(

@@ -52,7 +52,7 @@ class _LoginScreenState extends State<LoginScreen> {
       if (user.userType == 'client') {
         Navigator.pushReplacementNamed(context, '/client/map');
       } else {
-        Navigator.pushReplacementNamed(context, '/vendor/businesses');
+        Navigator.pushReplacementNamed(context, '/vendor');
       }
     } catch (e) {
       setState(() {

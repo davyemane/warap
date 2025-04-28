@@ -8,11 +8,15 @@ import '../../models/user_model.dart';
 import '../../services/business_service.dart';
 import '../../services/location_service.dart';
 import '../../services/auth_service.dart';
-import '../../services/error_handler.dart'; // Ajout de l'import
+import '../../services/error_handler.dart';
+import '../../services/cart_service.dart';
 import '../../widgets/common/custom_app_bar.dart';
 import '../../l10n/translations.dart';
 import 'business_details_screen.dart';
 import 'filter_screen.dart';
+import 'cart_screen.dart';
+import 'new_request_screen.dart';
+import 'request_service_history_screen.dart';
 
 class ClientMapScreen extends StatefulWidget {
   final bool showAppBar;
@@ -28,11 +32,13 @@ class _ClientMapScreenState extends State<ClientMapScreen> {
   final BusinessService _businessService = BusinessService();
   final LocationService _locationService = LocationService();
   final AuthService _authService = AuthService();
+  final CartService _cartService = CartService();
   
   List<BusinessModel> _allBusinesses = [];
   List<BusinessModel> _filteredBusinesses = [];
   Map<String, Marker> _markers = {};
   UserModel? _currentUser;
+  int _cartItemCount = 0;
   
   CameraPosition _initialCameraPosition = const CameraPosition(
     target: LatLng(0, 0),
@@ -55,6 +61,7 @@ class _ClientMapScreenState extends State<ClientMapScreen> {
     _loadCustomMarkerIcons();
     _loadBusinesses();
     _getCurrentLocation();
+    _loadCartItemCount();
   }
 
   // Charger les données de l'utilisateur actuel
@@ -82,6 +89,27 @@ class _ClientMapScreenState extends State<ClientMapScreen> {
         );
       }
     }
+  }
+
+  // Charger le nombre d'articles dans le panier
+  Future<void> _loadCartItemCount() async {
+    try {
+      final cartItems = await _cartService.getCart();
+      if (mounted) {
+        setState(() {
+          _cartItemCount = cartItems.length;
+        });
+      }
+    } catch (e) {
+      // Gérer silencieusement les erreurs
+    }
+  }
+  
+  void _navigateToCart() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const CartScreen()),
+    ).then((_) => _loadCartItemCount());
   }
 
   // Charger les icônes personnalisées pour les marqueurs
@@ -414,7 +442,7 @@ class _ClientMapScreenState extends State<ClientMapScreen> {
                       children: [
                         _ActionButton(
                           icon: Icons.directions,
-                          label: AppTranslations.text(context, 'directions'),
+                          label: "Itinéraire",
                           color: Colors.blue,
                           onTap: () {
                             // Ouvrir Google Maps
@@ -423,14 +451,13 @@ class _ClientMapScreenState extends State<ClientMapScreen> {
                         ),
                         _ActionButton(
                           icon: Icons.favorite_border,
-                          label: AppTranslations.text(context, 'favorites'),
+                          label: "Favoris",
                           color: Colors.red,
                           onTap: () {
                             // Ajouter aux favoris
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
-                                content: Text(AppTranslations.textWithParams(
-                                  context, 'added_to_favorites', [business.name])),
+                                content: Text("Ajouté aux favoris: ${business.name}"),
                               ),
                             );
                             Navigator.pop(context);
@@ -438,7 +465,7 @@ class _ClientMapScreenState extends State<ClientMapScreen> {
                         ),
                         _ActionButton(
                           icon: Icons.share,
-                          label: AppTranslations.text(context, 'share'),
+                          label: "Partager",
                           color: Colors.green,
                           onTap: () {
                             // Partager
@@ -460,7 +487,7 @@ class _ClientMapScreenState extends State<ClientMapScreen> {
                         style: ElevatedButton.styleFrom(
                           padding: const EdgeInsets.symmetric(vertical: 12),
                         ),
-                        child: Text(AppTranslations.text(context, 'see_more_details')),
+                        child: Text("Voir les détails et produits"),
                       ),
                     ),
                   ],
@@ -489,7 +516,7 @@ class _ClientMapScreenState extends State<ClientMapScreen> {
         MaterialPageRoute(
           builder: (context) => BusinessDetailsScreen(business: business),
         ),
-      );
+      ).then((_) => _loadCartItemCount());
     } catch (e) {
       if (mounted) {
         ErrorHandler.showErrorSnackBar(
@@ -537,7 +564,7 @@ class _ClientMapScreenState extends State<ClientMapScreen> {
     return Scaffold(
       appBar: widget.showAppBar
           ? CustomAppBar(
-              title: AppTranslations.text(context, 'nearby_businesses'),
+              title: "Commerces à proximité",
               currentUser: _currentUser,
               actions: [
                 IconButton(
@@ -566,6 +593,7 @@ class _ClientMapScreenState extends State<ClientMapScreen> {
                   },
                   zoomControlsEnabled: false,
                 ),
+                
                 // Bouton de filtre flottant
                 Positioned(
                   top: 16,
@@ -576,9 +604,9 @@ class _ClientMapScreenState extends State<ClientMapScreen> {
                     child: const Icon(Icons.filter_list),
                   ),
                 ),
+                
                 // Indicateur de filtres actifs
-                if (_selectedBusinessType != null ||
-                    _showOpenOnly)
+                if (_selectedBusinessType != null || _showOpenOnly)
                   Positioned(
                     top: 16,
                     left: 16,
@@ -604,7 +632,7 @@ class _ClientMapScreenState extends State<ClientMapScreen> {
                           const Icon(Icons.filter_alt, size: 16),
                           const SizedBox(width: 4),
                           Text(
-                            AppTranslations.text(context, 'active_filters'),
+                            "Filtres actifs",
                             style: TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.bold,
@@ -615,6 +643,69 @@ class _ClientMapScreenState extends State<ClientMapScreen> {
                       ),
                     ),
                   ),
+                  
+                // Bouton de panier (en bas à droite)
+                Positioned(
+                  bottom: 90, // Positionner au-dessus des boutons de service
+                  right: 16,
+                  child: FloatingActionButton(
+                    heroTag: 'cart',
+                    onPressed: _navigateToCart,
+                    backgroundColor: Colors.blue,
+                    child: Badge(
+                      isLabelVisible: _cartItemCount > 0,
+                      label: Text(_cartItemCount.toString(), style: const TextStyle(color: Colors.white)),
+                      child: const Icon(Icons.shopping_cart),
+                    ),
+                  ),
+                ),
+                
+                // Boutons pour les services en bas de l'écran
+                Positioned(
+                  bottom: 16,
+                  left: 16,
+                  right: 16,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(builder: (context) => const NewRequestScreen()),
+                            );
+                          },
+                          icon: const Icon(Icons.handyman),
+                          label: const Text("Demander un service"),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Theme.of(context).primaryColor,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(builder: (context) => const RequestServiceHistoryScreen()),
+                            );
+                          },
+                          icon: const Icon(Icons.history),
+                          label: const Text("Mes demandes"),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.amber,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ],
             ),
     );

@@ -6,11 +6,19 @@ import '../../models/business_model.dart';
 import '../../widgets/common/custom_app_bar.dart';
 import '../../l10n/translations.dart';
 import '../../services/error_handler.dart'; // Ajout de l'import
+// Imports à ajouter
+import '../../widgets/client/product_card.dart';
+import '../../services/product_service.dart';
+import '../../models/product_model.dart';
 
 class BusinessDetailsScreen extends StatelessWidget {
   final BusinessModel business;
-  
-  const BusinessDetailsScreen({Key? key, required this.business}) : super(key: key);
+  final ProductService _productService = ProductService();
+  final List<ProductModel> _products = [];
+  final bool _isLoading = true;
+  BusinessDetailsScreen({Key? key, required this.business}) : super(key: key);
+
+
 
   // Fonction de partage
   void _shareBusiness(BuildContext context) {
@@ -175,6 +183,8 @@ ${AppTranslations.text(context, 'discover_app')}
       ),
     );
   }
+
+
 
   Future<void> _openMap(BuildContext context, double latitude, double longitude) async {
     final Uri url = Uri.parse('https://www.google.com/maps/search/?api=1&query=$latitude,$longitude');

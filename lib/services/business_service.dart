@@ -1,141 +1,231 @@
 // Fichier services/business_service.dart
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/business_model.dart';
+import 'auth_service.dart';
+import 'error_handler.dart';
 
 class BusinessService {
-  final SupabaseClient _supabaseClient = Supabase.instance.client;
+  final SupabaseClient _supabase = Supabase.instance.client;
+  final AuthService _authService = AuthService();
 
-  // Récupérer tous les commerces
+  // Obtenir tous les commerces
   Future<List<BusinessModel>> getAllBusinesses() async {
     try {
-      final response = await _supabaseClient.from('businesses').select();
-      
-      return (response as List<dynamic>)
-          .map((business) => BusinessModel.fromJson(business))
+      final response = await _supabase
+          .from('businesses')
+          .select('*')
+          .order('name');
+
+      return (response as List)
+          .map((item) => BusinessModel.fromJson(item))
           .toList();
     } catch (e) {
-      print('Erreur lors de la récupération de tous les commerces: $e');
-      rethrow;
+      throw _handleError(e);
     }
   }
 
-  // Récupérer les commerces en fonction du type
-  Future<List<BusinessModel>> getBusinessesByType(String type) async {
+  // Obtenir un commerce par son ID
+  Future<BusinessModel> getBusinessById(String businessId) async {
     try {
-      final response = await _supabaseClient
+      final response = await _supabase
           .from('businesses')
-          .select()
-          .eq('business_type', type);
-      
-      return (response as List<dynamic>)
-          .map((business) => BusinessModel.fromJson(business))
-          .toList();
-    } catch (e) {
-      print('Erreur lors de la récupération des commerces par type: $e');
-      rethrow;
-    }
-  }
+          .select('*')
+          .eq('id', businessId)
+          .single();
 
-  // Récupérer les commerces d'un vendeur spécifique
-  Future<List<BusinessModel>> getVendorBusinesses(String userId) async {
-    try {
-      final response = await _supabaseClient
-          .from('businesses')
-          .select()
-          .eq('user_id', userId);
-      
-      return (response as List<dynamic>)
-          .map((business) => BusinessModel.fromJson(business))
-          .toList();
-    } catch (e) {
-      print('Erreur lors de la récupération des commerces du vendeur: $e');
-      rethrow;
-    }
-  }
-
-  // Ajouter un nouveau commerce
-  Future<BusinessModel> addBusiness(BusinessModel business) async {
-    try {
-      // Vérifier l'authentification
-      final currentUser = _supabaseClient.auth.currentUser;
-      if (currentUser == null) {
-        throw Exception('User not authenticated');
-      }
-      
-      // Vérifier que l'utilisateur existe dans la table users
-      final userExists = await _supabaseClient
-          .from('users')
-          .select('id')
-          .eq('id', currentUser.id)
-          .maybeSingle();
-          
-      if (userExists == null) {
-        throw Exception('User profile not found');
-      }
-      
-      // Préparer les données
-      final businessData = {
-        'user_id': currentUser.id,
-        'name': business.name,
-        'description': business.description,
-        'business_type': business.businessType,
-        'latitude': business.latitude,
-        'longitude': business.longitude,
-        'opening_time': business.openingTime,
-        'closing_time': business.closingTime,
-        'address': business.address,
-        'phone': business.phone,
-        'created_at': DateTime.now().toIso8601String(),
-      };
-      
-      print('Données à insérer: $businessData');
-      
-      // Insérer les données
-      final response = await _supabaseClient
-          .from('businesses')
-          .insert(businessData)
-          .select()
-          .maybeSingle();
-      
-      if (response == null) {
-        // Si aucune donnée n'est retournée, utiliser les données fournies
-        return business;
-      }
-      
       return BusinessModel.fromJson(response);
     } catch (e) {
-      print('Erreur lors de l\'ajout du commerce: $e');
-      rethrow;
+      throw _handleError(e);
     }
   }
 
-  // Mettre à jour un commerce existant
+  // Obtenir les commerces à proximité
+  Future<List<BusinessModel>> getNearbyBusinesses(double latitude, double longitude, double radius) async {
+    try {
+      // Utiliser une requête SQL pour calculer la distance
+      final response = await _supabase
+          .rpc('nearby_businesses', params: {
+            'lat': latitude,
+            'lng': longitude,
+            'radius_km': radius,
+          });
+
+      return (response as List)
+          .map((item) => BusinessModel.fromJson(item))
+          .toList();
+    } catch (e) {
+      throw _handleError(e);
+    }
+  }
+
+  // Obtenir les commerces de l'utilisateur
+  Future<List<BusinessModel>> getUserBusinesses() async {
+    try {
+      final currentUser = await _authService.getCurrentUser();
+      
+      if (currentUser == null) {
+        throw Exception('User not logged in');
+      }
+
+      final response = await _supabase
+          .from('businesses')
+          .select('*')
+          .eq('user_id', currentUser.id)
+          .order('name');
+
+      return (response as List)
+          .map((item) => BusinessModel.fromJson(item))
+          .toList();
+    } catch (e) {
+      throw _handleError(e);
+    }
+  }
+
+  // Créer un nouveau commerce
+  Future<BusinessModel> createBusiness(BusinessModel business) async {
+    try {
+      final currentUser = await _authService.getCurrentUser();
+      
+      if (currentUser == null) {
+        throw Exception('User not logged in');
+      }
+
+      final response = await _supabase
+          .from('businesses')
+          .insert({
+            'name': business.name,
+            'description': business.description,
+            'business_type': business.businessType,
+            'user_id': currentUser.id,
+            'latitude': business.latitude,
+            'longitude': business.longitude,
+            'address': business.address,
+            'opening_time': business.openingTime,
+            'closing_time': business.closingTime,
+            'phone': business.phone,
+          })
+          .select()
+          .single();
+
+      return BusinessModel.fromJson(response);
+    } catch (e) {
+      throw _handleError(e);
+    }
+  }
+
+  // Mettre à jour un commerce
   Future<BusinessModel> updateBusiness(BusinessModel business) async {
     try {
-      final response = await _supabaseClient
+      final currentUser = await _authService.getCurrentUser();
+      
+      if (currentUser == null) {
+        throw Exception('User not logged in');
+      }
+
+      // Vérifier que l'utilisateur est propriétaire du commerce
+      final businessCheck = await _supabase
           .from('businesses')
-          .update(business.toJson())
+          .select('user_id')
+          .eq('id', business.id)
+          .single();
+
+      if (businessCheck['user_id'] != currentUser.id) {
+        throw Exception('Vous n\'êtes pas autorisé à modifier ce commerce');
+      }
+
+      final response = await _supabase
+          .from('businesses')
+          .update({
+            'name': business.name,
+            'description': business.description,
+            'business_type': business.businessType,
+            'latitude': business.latitude,
+            'longitude': business.longitude,
+            'address': business.address,
+            'opening_time': business.openingTime,
+            'closing_time': business.closingTime,
+            'phone': business.phone,
+          })
           .eq('id', business.id)
           .select()
           .single();
-      
+
       return BusinessModel.fromJson(response);
     } catch (e) {
-      print('Erreur lors de la mise à jour du commerce: $e');
-      rethrow;
+      throw _handleError(e);
     }
   }
 
   // Supprimer un commerce
   Future<void> deleteBusiness(String businessId) async {
     try {
-      await _supabaseClient
+      final currentUser = await _authService.getCurrentUser();
+      
+      if (currentUser == null) {
+        throw Exception('User not logged in');
+      }
+
+      // Vérifier que l'utilisateur est propriétaire du commerce
+      final businessCheck = await _supabase
+          .from('businesses')
+          .select('user_id')
+          .eq('id', businessId)
+          .single();
+
+      if (businessCheck['user_id'] != currentUser.id) {
+        throw Exception('Vous n\'êtes pas autorisé à supprimer ce commerce');
+      }
+
+      await _supabase
           .from('businesses')
           .delete()
           .eq('id', businessId);
     } catch (e) {
-      print('Erreur lors de la suppression du commerce: $e');
-      rethrow;
+      throw _handleError(e);
     }
   }
+
+  // Gérer les erreurs
+  Exception _handleError(dynamic error) {
+    if (error is PostgrestException) {
+      if (error.code == '23505') {
+        return Exception('Un commerce avec ce nom existe déjà');
+      } else if (error.code == '23503') {
+        return Exception('L\'utilisateur n\'existe pas');
+      }
+    }
+    return Exception('Erreur lors de la gestion du commerce: $error');
+  }
+
+  Future<void> addBusiness(BusinessModel business) async {
+    // Add your logic to save the business to the database or API
+    // Example:
+    try {
+      final response = await Supabase.instance.client
+          .from('businesses')
+          .insert(business.toJson());
+      if (response.error != null) {
+        throw Exception(response.error!.message);
+      }
+    } catch (e) {
+      throw Exception('Failed to add business: $e');
+    }
+  }
+
+  // Ajouter à services/business_service.dart
+Future<List<BusinessModel>> getVendorBusinesses(String userId) async {
+  try {
+    final response = await _supabase
+        .from('businesses')
+        .select('*')
+        .eq('user_id', userId)
+        .order('name');
+
+    return (response as List)
+        .map((item) => BusinessModel.fromJson(item))
+        .toList();
+  } catch (e) {
+    throw _handleError(e);
+  }
+}
 }

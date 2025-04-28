@@ -1,4 +1,4 @@
-// Fichier models/user_model.dart
+// models/user_model.dart
 class UserModel {
   final String id;
   final String email;
@@ -7,6 +7,7 @@ class UserModel {
   final String? profileImageUrl; // URL de la photo de profil
   final DateTime createdAt;
   final DateTime? updatedAt;
+  final bool hasNotifications; // Ajouté pour le badge de notification
 
   UserModel({
     required this.id,
@@ -16,6 +17,7 @@ class UserModel {
     this.updatedAt,
     this.name = '', // Valeur par défaut vide
     this.profileImageUrl, // Optionnel
+    this.hasNotifications = false, // Par défaut, pas de notifications
   });
 
   // Créer une copie de l'utilisateur avec des modifications
@@ -27,6 +29,7 @@ class UserModel {
     String? profileImageUrl,
     DateTime? createdAt,
     DateTime? updatedAt,
+    bool? hasNotifications,
   }) {
     return UserModel(
       id: id ?? this.id,
@@ -36,6 +39,7 @@ class UserModel {
       profileImageUrl: profileImageUrl ?? this.profileImageUrl,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+      hasNotifications: hasNotifications ?? this.hasNotifications,
     );
   }
 
@@ -52,6 +56,7 @@ class UserModel {
       updatedAt: json['updated_at'] != null 
           ? DateTime.parse(json['updated_at']) 
           : null,
+      hasNotifications: json['has_notifications'] ?? false,
     );
   }
 
@@ -64,6 +69,7 @@ class UserModel {
       'profile_image_url': profileImageUrl,
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt?.toIso8601String(),
+      'has_notifications': hasNotifications,
     };
   }
 

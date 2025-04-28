@@ -30,25 +30,46 @@ class CustomBottomNavigation extends StatelessWidget {
     this.enableAnimation = true,
   }) : super(key: key);
 
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: backgroundColor,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 10,
-            offset: const Offset(0, -5),
+@override
+Widget build(BuildContext context) {
+  return Container(
+    decoration: BoxDecoration(
+      boxShadow: [
+        BoxShadow(
+          color: Colors.black.withOpacity(0.1),
+          blurRadius: 10,
+          offset: const Offset(0, -5),
+        ),
+      ],
+    ),
+    child: enableAnimation
+        ? _buildAnimatedNavBar(context)
+        : BottomNavigationBar(
+            currentIndex: currentIndex,
+            onTap: (index) {
+              try {
+                onTap(index);
+              } catch (e) {
+                ErrorHandler.showErrorSnackBar(
+                  context, 
+                  e,
+                  fallbackMessage: AppTranslations.text(context, 'error_navigation'),
+                );
+              }
+            },
+            selectedItemColor: selectedItemColor,
+            unselectedItemColor: unselectedItemColor,
+            backgroundColor: backgroundColor,
+            showUnselectedLabels: showLabels,
+            type: BottomNavigationBarType.fixed,
+            elevation: elevation,
+            iconSize: iconSize,
+            items: userType == 'client'
+                ? _buildClientNavItems(context)
+                : _buildVendorNavItems(context),
           ),
-        ],
-      ),
-      child: enableAnimation
-          ? _buildAnimatedNavBar(context)
-          : _buildRegularNavBar(context),
-    );
-  }
-
+  );
+}
   Widget _buildRegularNavBar(BuildContext context) {
     return BottomNavigationBar(
       currentIndex: currentIndex,
