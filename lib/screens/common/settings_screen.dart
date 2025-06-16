@@ -9,10 +9,10 @@ class SettingsScreen extends StatefulWidget {
   final VoidCallback onSettingsChanged;
   
   const SettingsScreen({
-    Key? key,
+    super.key,
     required this.user,
     required this.onSettingsChanged,
-  }) : super(key: key);
+  });
 
   @override
   State<SettingsScreen> createState() => _SettingsScreenState();

@@ -11,7 +11,7 @@ import 'business_detail_screen.dart';
 import 'add_business_screen.dart';
 
 class BusinessListScreen extends StatefulWidget {
-  const BusinessListScreen({Key? key}) : super(key: key);
+  const BusinessListScreen({super.key});
 
   @override
   State<BusinessListScreen> createState() => _BusinessListScreenState();
@@ -290,8 +290,8 @@ class _BusinessListScreenState extends State<BusinessListScreen> {
                 ),
       floatingActionButton: FloatingActionButton(
         onPressed: _navigateToAddBusiness,
-        child: const Icon(Icons.add),
         tooltip: AppTranslations.text(context, 'add_business'),
+        child: const Icon(Icons.add),
       ),
     );
   }

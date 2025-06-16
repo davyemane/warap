@@ -8,7 +8,7 @@ import '../../l10n/translations.dart';
 class EditBusinessScreen extends StatefulWidget {
   final BusinessModel business;
   
-  const EditBusinessScreen({Key? key, required this.business}) : super(key: key);
+  const EditBusinessScreen({super.key, required this.business});
 
   @override
   State<EditBusinessScreen> createState() => _EditBusinessScreenState();

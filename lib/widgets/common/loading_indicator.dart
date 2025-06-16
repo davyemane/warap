@@ -15,7 +15,7 @@ class LoadingIndicator extends StatelessWidget {
   final AnimationType animationType;
 
   const LoadingIndicator({
-    Key? key,
+    super.key,
     this.message,
     this.color = Colors.blue,
     this.size = 50.0,
@@ -24,7 +24,7 @@ class LoadingIndicator extends StatelessWidget {
     this.showShadow = true,
     this.icon,
     this.animationType = AnimationType.circular,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -270,13 +270,13 @@ class FullScreenLoader extends StatelessWidget {
   final bool dismissible;
 
   const FullScreenLoader({
-    Key? key,
+    super.key,
     this.message,
     this.animationType = AnimationType.circular,
     this.color = Colors.blue,
     this.icon,
     this.dismissible = false,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

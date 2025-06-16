@@ -7,7 +7,7 @@ import 'user_guide_screen.dart';
 import 'vendor_guide_screen.dart';
 
 class HelpScreen extends StatelessWidget {
-  const HelpScreen({Key? key}) : super(key: key);
+  const HelpScreen({super.key});
 
   Future<void> _launchURL(String urlString) async {
     final Uri url = Uri.parse(urlString);

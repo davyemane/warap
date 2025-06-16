@@ -27,7 +27,7 @@ class CustomAppBar extends StatefulWidget implements PreferredSizeWidget {
   final double elevation;
   
   const CustomAppBar({
-    Key? key,
+    super.key,
     required this.title,
     this.actions,
     this.showBackButton = false,
@@ -38,7 +38,7 @@ class CustomAppBar extends StatefulWidget implements PreferredSizeWidget {
     this.backgroundColor,
     this.foregroundColor,
     this.elevation = 0,
-  }) : super(key: key);
+  });
 
   @override
   Size get preferredSize => const Size.fromHeight(kToolbarHeight);

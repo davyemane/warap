@@ -8,17 +8,19 @@ class VendorAppBar extends StatefulWidget implements PreferredSizeWidget {
   final String title;
   final List<Widget>? actions;
   final bool showBackButton;
-  
+  final VoidCallback? onNotificationPressed;
+
   const VendorAppBar({
-    Key? key,
+    super.key,
     required this.title,
     this.actions,
+    this.onNotificationPressed,
     this.showBackButton = false,
-  }) : super(key: key);
-  
+  });
+
   @override
   Size get preferredSize => const Size.fromHeight(kToolbarHeight);
-  
+
   @override
   State<VendorAppBar> createState() => _VendorAppBarState();
 }
@@ -26,22 +28,22 @@ class VendorAppBar extends StatefulWidget implements PreferredSizeWidget {
 class _VendorAppBarState extends State<VendorAppBar> {
   final AuthService _authService = AuthService();
   final NotificationService _notificationService = NotificationService();
-  
+
   UserModel? _currentUser;
   bool _isLoadingUser = true;
   int _notificationCount = 0;
-  
+
   @override
   void initState() {
     super.initState();
     _loadUserData();
     _checkNotifications();
   }
-  
+
   Future<void> _loadUserData() async {
     try {
       final user = await _authService.getCurrentUser();
-      
+
       if (mounted) {
         setState(() {
           _currentUser = user;
@@ -57,12 +59,12 @@ class _VendorAppBarState extends State<VendorAppBar> {
       print('Erreur lors du chargement des données utilisateur: $e');
     }
   }
-  
+
   Future<void> _checkNotifications() async {
     try {
       // Pour simplifier, utiliser un compteur fixe en cas d'erreur
       int count = 0;
-      
+
       try {
         count = await _notificationService.getVendorRequestsCount();
       } catch (e) {
@@ -72,7 +74,7 @@ class _VendorAppBarState extends State<VendorAppBar> {
           count = 1; // Au moins une notification
         }
       }
-      
+
       if (mounted) {
         setState(() {
           _notificationCount = count;
@@ -82,7 +84,7 @@ class _VendorAppBarState extends State<VendorAppBar> {
       print('Erreur lors de la vérification des notifications: $e');
     }
   }
-  
+
   @override
   Widget build(BuildContext context) {
     return AppBar(
@@ -101,9 +103,10 @@ class _VendorAppBarState extends State<VendorAppBar> {
           children: [
             IconButton(
               icon: const Icon(Icons.notifications),
-              onPressed: () {
-                Navigator.pushNamed(context, '/vendor/new-orders');
-              },
+              onPressed: widget.onNotificationPressed ??
+                  () {
+                    Navigator.pushNamed(context, '/vendor/new-orders');
+                  },
               tooltip: 'Notifications',
             ),
             if (_notificationCount > 0)
@@ -133,7 +136,7 @@ class _VendorAppBarState extends State<VendorAppBar> {
               ),
           ],
         ),
-        
+
         // User profile icon
         IconButton(
           icon: _isLoadingUser
@@ -148,7 +151,8 @@ class _VendorAppBarState extends State<VendorAppBar> {
               : _currentUser != null && _currentUser!.hasProfileImage
                   ? CircleAvatar(
                       radius: 14,
-                      backgroundImage: NetworkImage(_currentUser!.profileImageUrl!),
+                      backgroundImage:
+                          NetworkImage(_currentUser!.profileImageUrl!),
                       backgroundColor: Colors.white,
                     )
                   : const CircleAvatar(
@@ -165,7 +169,7 @@ class _VendorAppBarState extends State<VendorAppBar> {
           },
           tooltip: 'Profile',
         ),
-        
+
         // Additional actions if provided
         if (widget.actions != null) ...?widget.actions,
       ],

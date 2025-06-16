@@ -7,7 +7,7 @@ import 'business_details_screen.dart';
 import '../../l10n/translations.dart';
 
 class SearchScreen extends StatefulWidget {
-  const SearchScreen({Key? key}) : super(key: key);
+  const SearchScreen({super.key});
 
   @override
   State<SearchScreen> createState() => _SearchScreenState();

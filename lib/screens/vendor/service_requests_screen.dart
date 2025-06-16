@@ -9,7 +9,7 @@ import '../../widgets/common/custom_app_bar.dart';
 import '../../widgets/common/loading_indicator.dart';
 
 class ServiceRequestsScreen extends StatefulWidget {
-  const ServiceRequestsScreen({Key? key}) : super(key: key);
+  const ServiceRequestsScreen({super.key});
 
   @override
   State<ServiceRequestsScreen> createState() => _ServiceRequestsScreenState();

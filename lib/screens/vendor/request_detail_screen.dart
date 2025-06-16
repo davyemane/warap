@@ -10,12 +10,15 @@ import '../../widgets/common/custom_app_bar.dart';
 import '../../widgets/common/loading_indicator.dart';
 
 class RequestDetailScreen extends StatefulWidget {
-  final ServiceRequestModel request;
-  
+  final ServiceRequestModel? request;      // Objet complet (optionnel)
+  final String? requestId;
+
   const RequestDetailScreen({
-    Key? key,
-    required this.request,
-  }) : super(key: key);
+    super.key,
+    this.request,
+    this.requestId,
+  }) : assert(request != null || requestId != null, 'Either request or requestId must be provided');
+
 
   @override
   State<RequestDetailScreen> createState() => _RequestDetailScreenState();
@@ -24,8 +27,41 @@ class RequestDetailScreen extends StatefulWidget {
 class _RequestDetailScreenState extends State<RequestDetailScreen> {
   final ServiceRequestService _requestService = ServiceRequestService();
   
-  bool _isLoading = false;
+  ServiceRequestModel? _currentRequest; // NOUVEAU: Request actuelle
+  bool _isLoading = false;               // MODIFIÉ: non-final maintenant
   bool _isUpdating = false;
+  
+  @override
+  void initState() {
+    super.initState();
+    if (widget.request != null) {
+      // Si on a l'objet complet, l'utiliser directement
+      _currentRequest = widget.request;
+    } else if (widget.requestId != null) {
+      // Si on a juste l'ID, charger depuis l'API
+      _loadRequestFromId();
+    }
+  }
+  
+  // NOUVEAU: Méthode pour charger depuis l'ID
+  Future<void> _loadRequestFromId() async {
+    setState(() => _isLoading = true);
+    try {
+      final request = await _requestService.getRequestById(widget.requestId!);
+      setState(() {
+        _currentRequest = request;
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() => _isLoading = false);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erreur lors du chargement de la demande: $e')),
+        );
+        Navigator.pop(context);
+      }
+    }
+  }
   
   Future<void> _updateRequestStatus(String status) async {
     // Confirmer le changement de statut
@@ -55,7 +91,7 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
     });
     
     try {
-      await _requestService.updateRequestStatus(widget.request.id, status);
+      await _requestService.updateRequestStatus(_currentRequest!.id, status);
       
       setState(() {
         _isUpdating = false;
@@ -85,6 +121,35 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
   
   @override
   Widget build(BuildContext context) {
+    // NOUVEAU: Gestion du chargement et des cas d'erreur
+    if (_isLoading) {
+      return Scaffold(
+        appBar: CustomAppBar(
+          title: AppTranslations.text(context, 'request_details'),
+          showBackButton: true,
+        ),
+        body: Center(
+          child: LoadingIndicator(
+            message: AppTranslations.text(context, 'loading_request'),
+            animationType: AnimationType.bounce,
+            color: Theme.of(context).primaryColor,
+          ),
+        ),
+      );
+    }
+    
+    if (_currentRequest == null) {
+      return Scaffold(
+        appBar: CustomAppBar(
+          title: AppTranslations.text(context, 'request_details'),
+          showBackButton: true,
+        ),
+        body: const Center(
+          child: Text('Demande non trouvée'),
+        ),
+      );
+    }
+    
     return Scaffold(
       appBar: CustomAppBar(
         title: AppTranslations.text(context, 'request_details'),
@@ -118,13 +183,13 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
                               Text(
-                                _formatDate(widget.request.requestDate),
+                                _formatDate(_currentRequest!.requestDate),
                                 style: TextStyle(
                                   color: Colors.grey[600],
                                   fontSize: 14,
                                 ),
                               ),
-                              _buildStatusChip(widget.request.status),
+                              _buildStatusChip(_currentRequest!.status),
                             ],
                           ),
                           const SizedBox(height: 16),
@@ -138,7 +203,7 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
                             ),
                           ),
                           const SizedBox(height: 8),
-                          Text('Client ID: ${widget.request.clientId}'),
+                          Text('Client ID: ${_currentRequest!.clientId}'),
                           const SizedBox(height: 16),
                           
                           // Description
@@ -150,7 +215,7 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
                             ),
                           ),
                           const SizedBox(height: 8),
-                          Text(widget.request.description),
+                          Text(_currentRequest!.description),
                         ],
                       ),
                     ),
@@ -178,7 +243,7 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
                           const Icon(Icons.event, color: Colors.blue),
                           const SizedBox(width: 16),
                           Text(
-                            _formatDateTime(widget.request.preferredDate),
+                            _formatDateTime(_currentRequest!.preferredDate),
                             style: const TextStyle(fontSize: 16),
                           ),
                         ],
@@ -212,7 +277,7 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
                               const SizedBox(width: 16),
                               Expanded(
                                 child: Text(
-                                  widget.request.address,
+                                  _currentRequest!.address,
                                   style: const TextStyle(fontSize: 16),
                                 ),
                               ),
@@ -225,16 +290,16 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
                               borderRadius: BorderRadius.circular(12),
                               child: GoogleMap(
                                 initialCameraPosition: CameraPosition(
-                                  target: LatLng(widget.request.latitude, widget.request.longitude),
+                                  target: LatLng(_currentRequest!.latitude, _currentRequest!.longitude),
                                   zoom: 14,
                                 ),
                                 markers: {
                                   Marker(
                                     markerId: const MarkerId('request_location'),
-                                    position: LatLng(widget.request.latitude, widget.request.longitude),
+                                    position: LatLng(_currentRequest!.latitude, _currentRequest!.longitude),
                                     infoWindow: InfoWindow(
                                       title: AppTranslations.text(context, 'service_location'),
-                                      snippet: widget.request.address,
+                                      snippet: _currentRequest!.address,
                                     ),
                                   ),
                                 },
@@ -254,7 +319,7 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
                   const SizedBox(height: 32),
                   
                   // Actions selon statut
-                  if (widget.request.status == 'pending') ...[
+                  if (_currentRequest!.status == 'pending') ...[
                     Row(
                       children: [
                         Expanded(
@@ -282,7 +347,7 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
                         ),
                       ],
                     ),
-                  ] else if (widget.request.status == 'accepted') ...[
+                  ] else if (_currentRequest!.status == 'accepted') ...[
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton.icon(

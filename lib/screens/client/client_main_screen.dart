@@ -15,7 +15,7 @@ import '../../l10n/translations.dart';
 import '../../config/app_theme.dart'; // Pour les couleurs du thème
 
 class ClientMainScreen extends StatefulWidget {
-  const ClientMainScreen({Key? key}) : super(key: key);
+  const ClientMainScreen({super.key});
 
   @override
   State<ClientMainScreen> createState() => _ClientMainScreenState();
@@ -76,13 +76,16 @@ class _ClientMainScreenState extends State<ClientMainScreen> {
     });
   }
   
-  void _navigateToCart() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => const CartScreen()),
-    ).then((_) => _loadCartItemCount());
-  }
+void _navigateToCart() {
+  // Debug print to check if the method is being called
+  print('Navigate to cart button pressed');
   
+  // Use pushNamed instead of push for consistency
+  Navigator.pushNamed(
+    context,
+    '/client/cart',
+  ).then((_) => _loadCartItemCount());
+}  
   void _navigateToRequestService() {
     Navigator.push(
       context,

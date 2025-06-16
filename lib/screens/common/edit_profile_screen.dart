@@ -10,9 +10,9 @@ class EditProfileScreen extends StatefulWidget {
   final UserModel user;
 
   const EditProfileScreen({
-    Key? key,
+    super.key,
     required this.user,
-  }) : super(key: key);
+  });
 
   @override
   State<EditProfileScreen> createState() => _EditProfileScreenState();

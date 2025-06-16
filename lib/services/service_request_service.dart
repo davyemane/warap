@@ -133,41 +133,67 @@ class ServiceRequestService {
   // Ajoutez ces méthodes au service ServiceRequestService
 
 // Obtenir les demandes en attente
-  Future<List<ServiceRequestModel>> getPendingRequests() async {
-    try {
-      final currentUser = await _authService.getCurrentUser();
-
-      if (currentUser == null) {
-        throw Exception('User not logged in');
-      }
-
-      // Obtenir d'abord les commerces du vendeur
-      final businesses = await _supabase
-          .from('businesses')
-          .select('id')
-          .eq('user_id', currentUser.id);
-      final businessIds = (businesses as List).map((b) => b['id']).toList();
-
-      if (businessIds.isEmpty) {
-        return [];
-      }
-
-      // Obtenir les demandes en attente
-      final response = await _supabase
-          .from('service_requests')
-          .select('*, clients(*)')
-          .inFilter('business_id', businessIds)
-          .eq('status', 'pending')
-          .order('request_date', ascending: false);
-
-      return (response as List)
-          .map((item) => ServiceRequestModel.fromJson(item))
-          .toList();
-    } catch (e) {
-      throw _handleError(e);
+Future<List<ServiceRequestModel>> getPendingRequests() async {
+  try {
+    print('🔍 Chargement des demandes de service en attente...');
+    
+    final currentUser = await _authService.getCurrentUser();
+    if (currentUser == null) {
+      print('⚠️ Utilisateur non connecté');
+      return [];
     }
+    
+    // 1. Obtenir les ID des commerces du vendeur
+    final businesses = await _supabase
+        .from('businesses')
+        .select('id')
+        .eq('user_id', currentUser.id);
+    
+    if ((businesses as List).isEmpty) {
+      print('⚠️ Aucun commerce trouvé');
+      return [];
+    }
+    
+    final businessIds = (businesses as List).map((b) => b['id'] as String).toList();
+    
+    // 2. MODIFICATION ICI - Ne pas utiliser la jointure avec clients
+    // Récupérer les demandes en attente pour ces commerces sans joindre clients
+    final response = await _supabase
+        .from('service_requests')
+        .select('*') // Suppression de 'clients(*)' qui cause l'erreur
+        .inFilter('business_id', businessIds)
+        .eq('status', 'pending')
+        .order('request_date', ascending: false);
+    
+    // Convertir les données en modèles
+    List<ServiceRequestModel> requests = [];
+    try {
+      requests = (response as List).map((item) => ServiceRequestModel.fromJson(item)).toList();
+      print('✅ ${requests.length} demandes en attente récupérées');
+    } catch (e) {
+      print('❌ Erreur lors de la conversion des demandes: $e');
+    }
+    
+    return requests;
+  } catch (e) {
+    print('❌ Erreur lors de la récupération des demandes en attente: $e');
+    return [];
   }
+}
+Future<ServiceRequestModel> getRequestById(String requestId) async {
+  try {
+    final response = await _supabase
+        .from('service_requests')
+        .select()
+        .eq('id', requestId)
+        .single();
 
+    return ServiceRequestModel.fromJson(response);
+  } catch (e) {
+    print('Erreur lors du chargement de la demande: $e');
+    throw Exception('Erreur lors du chargement de la demande: $e');
+  }
+}
   // Récupérer les demandes pour un commerce
   Future<List<ServiceRequestModel>> getBusinessRequests() async {
     try {

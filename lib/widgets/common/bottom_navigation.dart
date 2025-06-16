@@ -17,7 +17,7 @@ class CustomBottomNavigation extends StatelessWidget {
   final bool enableAnimation;
 
   const CustomBottomNavigation({
-    Key? key,
+    super.key,
     required this.currentIndex,
     required this.onTap,
     required this.userType,
@@ -28,7 +28,7 @@ class CustomBottomNavigation extends StatelessWidget {
     this.showLabels = true,
     this.iconSize = 24,
     this.enableAnimation = true,
-  }) : super(key: key);
+  });
 
 @override
 Widget build(BuildContext context) {

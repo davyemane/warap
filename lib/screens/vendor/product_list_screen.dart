@@ -1,5 +1,7 @@
 // Fichier screens/vendor/product_list_screen.dart
 import 'package:flutter/material.dart';
+import 'package:warap/screens/vendor/add_product_screen.dart';
+import 'package:warap/screens/vendor/edit_product_screen.dart';
 import '../../models/business_model.dart';
 import '../../models/product_model.dart';
 import '../../services/product_service.dart';
@@ -11,7 +13,7 @@ import '../../widgets/common/loading_indicator.dart';
 class ProductListScreen extends StatefulWidget {
   final BusinessModel business;
   
-  const ProductListScreen({Key? key, required this.business}) : super(key: key);
+  const ProductListScreen({super.key, required this.business});
 
   @override
   State<ProductListScreen> createState() => _ProductListScreenState();
@@ -133,24 +135,24 @@ class _ProductListScreenState extends State<ProductListScreen> {
     }
   }
   
-  void _addNewProduct() {
-    // Naviguer vers l'écran d'ajout de produit
-    Navigator.pushNamed(
-      context,
-      '/vendor/add-product',
-      arguments: widget.business,
-    ).then((_) => _loadProducts());
-  }
-  
-  void _editProduct(ProductModel product) {
-    // Naviguer vers l'écran d'édition de produit
-    Navigator.pushNamed(
-      context,
-      '/vendor/edit-product',
-      arguments: product,
-    ).then((_) => _loadProducts());
-  }
-  
+void _addNewProduct() {
+  // Utiliser MaterialPageRoute directement au lieu de pushNamed
+  Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder: (context) => AddProductScreen(business: widget.business),
+    ),
+  ).then((_) => _loadProducts());
+}  
+void _editProduct(ProductModel product) {
+  // Utiliser MaterialPageRoute directement au lieu de pushNamed
+  Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder: (context) => EditProductScreen(product: product),
+    ),
+  ).then((_) => _loadProducts());
+}  
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -438,8 +440,8 @@ class _ProductListScreenState extends State<ProductListScreen> {
             ),
       floatingActionButton: FloatingActionButton(
         onPressed: _addNewProduct,
-        child: const Icon(Icons.add),
         tooltip: AppTranslations.text(context, 'add_product'),
+        child: const Icon(Icons.add),
       ),
     );
   }

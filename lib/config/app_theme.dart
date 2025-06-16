@@ -70,7 +70,6 @@ class AppTheme {
         primary: primaryColor,
         secondary: accentColor,
         surface: const Color(0xFF202020),
-        background: const Color(0xFF121212),
       ),
       appBarTheme: const AppBarTheme(
         backgroundColor: Color(0xFF202020),

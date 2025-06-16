@@ -10,7 +10,7 @@ import '../../widgets/common/custom_app_bar.dart';
 class ProductDetailScreen extends StatefulWidget {
   final ProductModel product;
   
-  const ProductDetailScreen({Key? key, required this.product}) : super(key: key);
+  const ProductDetailScreen({super.key, required this.product});
 
   @override
   State<ProductDetailScreen> createState() => _ProductDetailScreenState();
@@ -22,56 +22,59 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   bool _isAddingToCart = false;
   
   Future<void> _addToCart() async {
+  setState(() {
+    _isAddingToCart = true;
+  });
+  
+  try {
+    print('Adding to cart: ${widget.product.name} x $_quantity');
+    
+    final cartItem = CartItemModel(
+      id: DateTime.now().millisecondsSinceEpoch.toString(), // Temporary ID
+      productId: widget.product.id,
+      businessId: widget.product.businessId,
+      name: widget.product.name,
+      price: widget.product.price,
+      quantity: _quantity,
+      imageUrl: widget.product.imageUrl,
+    );
+    
+    await _cartService.addToCart(cartItem);
+    
     setState(() {
-      _isAddingToCart = true;
+      _isAddingToCart = false;
     });
     
-    try {
-      final cartItem = CartItemModel(
-        id: '', // Sera généré par le service
-        productId: widget.product.id,
-        businessId: widget.product.businessId,
-        name: widget.product.name,
-        price: widget.product.price,
-        quantity: _quantity,
-        imageUrl: widget.product.imageUrl,
-      );
-      
-      await _cartService.addToCart(cartItem);
-      
-      setState(() {
-        _isAddingToCart = false;
-      });
-      
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(AppTranslations.text(context, 'added_to_cart')),
-            action: SnackBarAction(
-              label: AppTranslations.text(context, 'view_cart'),
-              onPressed: () {
-                Navigator.pushNamed(context, '/cart');
-              },
-            ),
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(AppTranslations.text(context, 'added_to_cart')),
+          action: SnackBarAction(
+            label: AppTranslations.text(context, 'view_cart'),
+            onPressed: () {
+              Navigator.pushNamed(context, '/client/cart');
+            },
           ),
-        );
-      }
-    } catch (e) {
-      setState(() {
-        _isAddingToCart = false;
-      });
-      
-      if (mounted) {
-        ErrorHandler.showErrorSnackBar(
-          context, 
-          e,
-          fallbackMessage: AppTranslations.text(context, 'error_adding_to_cart'),
-          onRetry: _addToCart,
-        );
-      }
+        ),
+      );
+    }
+  } catch (e) {
+    print('Error adding to cart: $e');
+    setState(() {
+      _isAddingToCart = false;
+    });
+    
+    if (mounted) {
+      ErrorHandler.showErrorSnackBar(
+        context, 
+        e,
+        fallbackMessage: AppTranslations.text(context, 'error_adding_to_cart'),
+        onRetry: _addToCart,
+      );
     }
   }
-  
+}
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(

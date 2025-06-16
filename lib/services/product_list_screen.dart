@@ -11,7 +11,7 @@ import '../../widgets/common/loading_indicator.dart';
 class ProductListScreen extends StatefulWidget {
   final BusinessModel business;
   
-  const ProductListScreen({Key? key, required this.business}) : super(key: key);
+  const ProductListScreen({super.key, required this.business});
 
   @override
   State<ProductListScreen> createState() => _ProductListScreenState();
@@ -438,8 +438,8 @@ class _ProductListScreenState extends State<ProductListScreen> {
             ),
       floatingActionButton: FloatingActionButton(
         onPressed: _addNewProduct,
-        child: const Icon(Icons.add),
         tooltip: AppTranslations.text(context, 'add_product'),
+        child: const Icon(Icons.add),
       ),
     );
   }

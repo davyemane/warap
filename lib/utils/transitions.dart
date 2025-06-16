@@ -66,11 +66,11 @@ class AnimatedListItem extends StatelessWidget {
   final Duration duration;
   
   const AnimatedListItem({
-    Key? key,
+    super.key,
     required this.child,
     required this.index,
     this.duration = const Duration(milliseconds: 400),
-  }) : super(key: key);
+  });
   
   @override
   Widget build(BuildContext context) {

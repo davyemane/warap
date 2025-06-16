@@ -2,7 +2,6 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/business_model.dart';
 import 'auth_service.dart';
-import 'error_handler.dart';
 
 class BusinessService {
   final SupabaseClient _supabase = Supabase.instance.client;

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../../l10n/translations.dart';
 
 class UserGuideScreen extends StatelessWidget {
-  const UserGuideScreen({Key? key}) : super(key: key);
+  const UserGuideScreen({super.key});
 
   @override
   Widget build(BuildContext context) {

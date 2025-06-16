@@ -15,7 +15,7 @@ import 'product_list_screen.dart';
 class BusinessDetailScreen extends StatefulWidget {
   final BusinessModel business;
   
-  const BusinessDetailScreen({Key? key, required this.business}) : super(key: key);
+  const BusinessDetailScreen({super.key, required this.business});
 
   @override
   State<BusinessDetailScreen> createState() => _BusinessDetailScreenState();

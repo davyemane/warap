@@ -13,7 +13,7 @@ import '../../widgets/common/loading_indicator.dart';
 class RequestServiceScreen extends StatefulWidget {
   final BusinessModel business;
   
-  const RequestServiceScreen({Key? key, required this.business}) : super(key: key);
+  const RequestServiceScreen({super.key, required this.business});
 
   @override
   State<RequestServiceScreen> createState() => _RequestServiceScreenState();

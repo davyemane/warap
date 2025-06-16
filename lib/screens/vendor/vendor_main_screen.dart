@@ -12,7 +12,7 @@ import 'add_business_screen.dart';
 import '../auth/profile_screen.dart';
 
 class VendorMainScreen extends StatefulWidget {
-  const VendorMainScreen({Key? key}) : super(key: key);
+  const VendorMainScreen({super.key});
 
   @override
   State<VendorMainScreen> createState() => _VendorMainScreenState();

@@ -4,7 +4,6 @@ import '../models/user_model.dart';
 import 'auth_service.dart';
 import '../screens/client/client_main_screen.dart';
 import '../screens/vendor/vendor_main_screen.dart';
-import '../screens/auth/login_screen.dart';
 
 class UserAccessService {
   final AuthService _authService = AuthService();

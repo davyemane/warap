@@ -9,7 +9,7 @@ import '../../widgets/common/custom_app_bar.dart';
 import '../../widgets/common/loading_indicator.dart';
 
 class OrdersScreen extends StatefulWidget {
-  const OrdersScreen({Key? key}) : super(key: key);
+  const OrdersScreen({super.key});
 
   @override
   State<OrdersScreen> createState() => _OrdersScreenState();
@@ -58,35 +58,38 @@ class _OrdersScreenState extends State<OrdersScreen> with SingleTickerProviderSt
     }
   }
   
-  Future<void> _loadOrders() async {
-    setState(() {
-      _isLoading = true;
-    });
+// Dans la classe _OrdersScreenState
+Future<void> _loadOrders() async {
+  setState(() {
+    _isLoading = true;
+  });
+  
+  try {
+    // Utilisez la méthode getAllOrders au lieu de getBusinessOrders
+    final orders = await _orderService.getAllOrders();
     
-    try {
-      final orders = await _orderService.getBusinessOrders();
-      
+    if (mounted) {
       setState(() {
         _orders = orders;
-        _applyFilter(_selectedFilter);
+        _filteredOrders = orders;
         _isLoading = false;
       });
-    } catch (e) {
+    }
+  } catch (e) {
+    if (mounted) {
       setState(() {
         _isLoading = false;
       });
       
-      if (mounted) {
-        ErrorHandler.showErrorSnackBar(
-          context, 
-          e,
-          fallbackMessage: AppTranslations.text(context, 'error_loading_orders'),
-          onRetry: _loadOrders,
-        );
-      }
+      ErrorHandler.showErrorSnackBar(
+        context,
+        e,
+        fallbackMessage: 'Erreur lors du chargement des commandes',
+        onRetry: _loadOrders,
+      );
     }
   }
-  
+}  
   void _applyFilter(String filter) {
     setState(() {
       _selectedFilter = filter;

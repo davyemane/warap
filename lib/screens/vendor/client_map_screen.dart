@@ -1,18 +1,16 @@
-// Fichier screens/vendor/client_map_screen.dart
+// Nouveau fichier: screens/vendor/client_map_screen.dart
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
-import '../../models/service_request_model.dart';
-import '../../services/service_request_service.dart';
+import 'package:url_launcher/url_launcher.dart';
+import '../../models/user_model.dart';
+import '../../services/client_service.dart';
 import '../../services/location_service.dart';
 import '../../services/error_handler.dart';
-import '../../l10n/translations.dart';
-import '../../widgets/common/custom_app_bar.dart';
-import '../../widgets/common/loading_indicator.dart';
 
 class ClientMapScreen extends StatefulWidget {
-  const ClientMapScreen({Key? key}) : super(key: key);
+  const ClientMapScreen({super.key});
 
   @override
   State<ClientMapScreen> createState() => _ClientMapScreenState();
@@ -20,749 +18,498 @@ class ClientMapScreen extends StatefulWidget {
 
 class _ClientMapScreenState extends State<ClientMapScreen> {
   final Completer<GoogleMapController> _controller = Completer();
-  final ServiceRequestService _requestService = ServiceRequestService();
+  final ClientService _clientService = ClientService();
   final LocationService _locationService = LocationService();
   
-  List<ServiceRequestModel> _allRequests = [];
-  List<ServiceRequestModel> _filteredRequests = [];
-  Map<String, Marker> _markers = {};
+  List<UserModel> _clients = [];
+  Map<MarkerId, Marker> _markers = {};
   
-  CameraPosition _initialCameraPosition = const CameraPosition(
-    target: LatLng(0, 0),
-    zoom: 14,
-  );
-  
-  String _selectedStatus = 'all';
-  bool _showOnlyNearby = false;
-  double _maxDistance = 10.0; // en km
-  bool _isLoading = true;
-  bool _isRefreshing = false;
   Position? _currentPosition;
-  Timer? _refreshTimer;
+  bool _isLoading = true;
+  String _errorMessage = '';
   
   @override
   void initState() {
     super.initState();
-    _getCurrentLocation();
-    _loadServiceRequests();
-    
-    // Mettre à jour les demandes toutes les 5 minutes
-    _refreshTimer = Timer.periodic(const Duration(minutes: 5), (timer) {
-      if (mounted) _refreshData();
-    });
+    _initialize();
   }
   
-  @override
-  void dispose() {
-    _refreshTimer?.cancel();
-    super.dispose();
+  Future<void> _initialize() async {
+    await _getCurrentLocation();
+    await _loadClients();
   }
   
   Future<void> _getCurrentLocation() async {
     try {
       final position = await _locationService.getCurrentPosition();
-      final GoogleMapController controller = await _controller.future;
       
       setState(() {
         _currentPosition = position;
-        _initialCameraPosition = CameraPosition(
-          target: LatLng(position.latitude, position.longitude),
-          zoom: 14,
-        );
       });
       
-      controller.animateCamera(CameraUpdate.newCameraPosition(_initialCameraPosition));
-      
-      // Une fois que nous avons la position actuelle, filtrer les demandes
-      if (_showOnlyNearby) {
-        _applyFilters();
-      }
-    } catch (e) {
-      if (mounted) {
-        ErrorHandler.showErrorSnackBar(
-          context, 
-          e,
-          fallbackMessage: AppTranslations.text(context, 'error_location'),
-          onRetry: _getCurrentLocation,
-        );
-      }
-    }
-  }
-  
-  Future<void> _loadServiceRequests() async {
-    setState(() {
-      _isLoading = true;
-    });
-    
-    try {
-      final requests = await _requestService.getServiceRequests();
-      
-      setState(() {
-        _allRequests = requests;
-        _applyFilters();
-        _isLoading = false;
-      });
-    } catch (e) {
-      setState(() {
-        _isLoading = false;
-      });
-      
-      if (mounted) {
-        ErrorHandler.showErrorSnackBar(
-          context, 
-          e,
-          fallbackMessage: AppTranslations.text(context, 'error_loading_requests'),
-          onRetry: _loadServiceRequests,
-        );
-      }
-    }
-  }
-  
-  Future<void> _refreshData() async {
-    if (_isRefreshing) return;
-    
-    setState(() {
-      _isRefreshing = true;
-    });
-    
-    try {
-      final requests = await _requestService.getServiceRequests();
-      
-      setState(() {
-        _allRequests = requests;
-        _applyFilters();
-        _isRefreshing = false;
-      });
-    } catch (e) {
-      setState(() {
-        _isRefreshing = false;
-      });
-      
-      if (mounted) {
-        ErrorHandler.showErrorSnackBar(
-          context, 
-          e,
-          fallbackMessage: AppTranslations.text(context, 'error_refreshing_data'),
-        );
-      }
-    }
-  }
-  
-  void _applyFilters() {
-    List<ServiceRequestModel> filtered = _allRequests;
-    
-    // Filtre par statut
-    if (_selectedStatus != 'all') {
-      filtered = filtered.where((request) => request.status == _selectedStatus).toList();
-    }
-    
-    // Filtre par distance
-    if (_showOnlyNearby && _currentPosition != null) {
-      filtered = filtered.where((request) {
-        final distance = _locationService.calculateDistance(
-          _currentPosition!.latitude,
-          _currentPosition!.longitude,
-          request.latitude,
-          request.longitude,
-        );
-        
-        return distance <= _maxDistance;
-      }).toList();
-      
-      // Trier par proximité
-      filtered.sort((a, b) {
-        final distanceA = _locationService.calculateDistance(
-          _currentPosition!.latitude,
-          _currentPosition!.longitude,
-          a.latitude,
-          a.longitude,
-        );
-        
-        final distanceB = _locationService.calculateDistance(
-          _currentPosition!.latitude,
-          _currentPosition!.longitude,
-          b.latitude,
-          b.longitude,
-        );
-        
-        return distanceA.compareTo(distanceB);
-      });
-    }
-    
-    setState(() {
-      _filteredRequests = filtered;
-      _createMarkers();
-    });
-  }
-  
-  void _createMarkers() {
-    final Map<String, Marker> markerMap = {};
-    
-    // Ajouter les marqueurs pour les demandes
-    for (final request in _filteredRequests) {
-      final marker = Marker(
-        markerId: MarkerId(request.id),
-        position: LatLng(request.latitude, request.longitude),
-        infoWindow: InfoWindow(
-          title: _getRequestTitle(request),
-          snippet: _getRequestSnippet(request),
-          onTap: () => _navigateToRequestDetails(request),
-        ),
-        icon: _getMarkerIcon(request.status),
-        onTap: () {
-          _showRequestInfoBottomSheet(request);
-        },
-      );
-      
-      markerMap[request.id] = marker;
-    }
-    
-    // Ajouter un marqueur pour la position actuelle
-    if (_currentPosition != null) {
-      final userMarker = Marker(
-        markerId: const MarkerId('current_location'),
-        position: LatLng(_currentPosition!.latitude, _currentPosition!.longitude),
-        infoWindow: InfoWindow(
-          title: AppTranslations.text(context, 'your_location'),
-        ),
-        icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue),
-        zIndex: 2, // Pour s'assurer qu'il est au-dessus des autres marqueurs
-      );
-      
-      markerMap['current_location'] = userMarker;
-    }
-    
-    setState(() {
-      _markers = markerMap;
-    });
-  }
-  
-  BitmapDescriptor _getMarkerIcon(String status) {
-    switch (status) {
-      case 'pending':
-        return BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueOrange);
-      case 'accepted':
-        return BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen);
-      case 'completed':
-        return BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueAzure);
-      case 'cancelled':
-        return BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed);
-      default:
-        return BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueYellow);
-    }
-  }
-  
-  String _getRequestTitle(ServiceRequestModel request) {
-    return AppTranslations.text(context, 'service_request');
-  }
-  
-  String _getRequestSnippet(ServiceRequestModel request) {
-    final distance = _currentPosition != null
-        ? _locationService.calculateDistance(
-            _currentPosition!.latitude,
-            _currentPosition!.longitude,
-            request.latitude,
-            request.longitude,
-          ).toStringAsFixed(1)
-        : null;
-        
-    return distance != null
-        ? '${_getStatusLabel(context, request.status)} - ${distance} km'
-        : _getStatusLabel(context, request.status);
-  }
-  
-  Future<void> _acceptRequest(ServiceRequestModel request) async {
-    try {
-      await _requestService.updateRequestStatus(request.id, 'accepted');
-      
-      // Recharger les demandes
-      await _loadServiceRequests();
-      
-      if (mounted) {
-        Navigator.pop(context); // Fermer la bottom sheet
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(AppTranslations.text(context, 'request_accepted')),
-            backgroundColor: Colors.green,
+      if (_controller.isCompleted) {
+        final GoogleMapController controller = await _controller.future;
+        controller.animateCamera(
+          CameraUpdate.newCameraPosition(
+            CameraPosition(
+              target: LatLng(position.latitude, position.longitude),
+              zoom: 12,
+            ),
           ),
         );
       }
     } catch (e) {
-      if (mounted) {
-        Navigator.pop(context); // Fermer la bottom sheet
-        ErrorHandler.showErrorSnackBar(
-          context, 
-          e,
-          fallbackMessage: AppTranslations.text(context, 'error_accepting_request'),
-          onRetry: () => _acceptRequest(request),
-        );
+      setState(() {
+        _errorMessage = e.toString();
+      });
+    }
+  }
+  
+  Future<void> _loadClients() async {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = '';
+    });
+    
+    try {
+      final clients = await _clientService.getBusinessClients();
+      
+      setState(() {
+        _clients = clients;
+        _isLoading = false;
+      });
+      
+      _createMarkers();
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+        _errorMessage = e.toString();
+      });
+      
+      ErrorHandler.showErrorSnackBar(
+        context,
+        e,
+        fallbackMessage: 'Erreur lors du chargement des clients',
+        onRetry: _loadClients,
+      );
+    }
+  }
+  
+  void _createMarkers() async {
+    Map<MarkerId, Marker> markers = {};
+    
+    // Marqueur pour la position actuelle
+    if (_currentPosition != null) {
+      final currentPosMarkerId = const MarkerId('current_position');
+      final currentPosMarker = Marker(
+        markerId: currentPosMarkerId,
+        position: LatLng(_currentPosition!.latitude, _currentPosition!.longitude),
+        infoWindow: const InfoWindow(title: 'Ma position'),
+        icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue),
+      );
+      
+      markers[currentPosMarkerId] = currentPosMarker;
+    }
+    
+    // Obtenir la localisation pour chaque client (à partir des commandes ou demandes)
+    for (int i = 0; i < _clients.length; i++) {
+      final client = _clients[i];
+      
+      // Vous devrez adapter cette partie en fonction de votre structure de données
+      // Supposons que nous ayons obtenu l'adresse du client et qu'il faut la géocoder
+      try {
+        // Pour cet exemple, nous allons créer des positions fictives autour de la position actuelle
+        // Dans une vraie application, vous devriez obtenir les vraies coordonnées de vos clients
+        if (_currentPosition != null) {
+          // Création de positions fictives à proximité
+          final offset = (i % 10) * 0.002; // Petit décalage pour éviter les superpositions
+          final lat = _currentPosition!.latitude + offset;
+          final lng = _currentPosition!.longitude + offset;
+          
+          final markerId = MarkerId(client.id);
+          final marker = Marker(
+            markerId: markerId,
+            position: LatLng(lat, lng),
+            infoWindow: InfoWindow(
+              title: client.name.isNotEmpty ? client.name : 'Client',
+              snippet: client.email,
+              onTap: () => _showClientDetailBottomSheet(client, lat, lng),
+            ),
+            onTap: () => _showClientDetailBottomSheet(client, lat, lng),
+          );
+          
+          markers[markerId] = marker;
+        }
+      } catch (e) {
+        print('❌ Erreur lors de la création du marqueur pour ${client.name}: $e');
       }
     }
-  }
-  
-  Future<void> _navigateToRequestDetails(ServiceRequestModel request) async {
-    final result = await Navigator.pushNamed(
-      context,
-      '/vendor/request-detail',
-      arguments: request,
-    );
     
-    if (result == true) {
-      // Si des modifications ont été apportées, recharger les données
-      _loadServiceRequests();
+    setState(() {
+      _markers = markers;
+    });
+    
+    // Ajuster la caméra pour montrer tous les marqueurs
+    if (_markers.isNotEmpty && _controller.isCompleted) {
+      _fitBoundsToAllMarkers();
     }
   }
   
-  void _showRequestInfoBottomSheet(ServiceRequestModel request) {
+  Future<void> _fitBoundsToAllMarkers() async {
+    if (_markers.isEmpty) return;
+    
+    final GoogleMapController controller = await _controller.future;
+    
+    // Calculer les limites pour inclure tous les marqueurs
+    double minLat = double.infinity;
+    double maxLat = -double.infinity;
+    double minLng = double.infinity;
+    double maxLng = -double.infinity;
+    
+    for (var marker in _markers.values) {
+      minLat = marker.position.latitude < minLat ? marker.position.latitude : minLat;
+      maxLat = marker.position.latitude > maxLat ? marker.position.latitude : maxLat;
+      minLng = marker.position.longitude < minLng ? marker.position.longitude : minLng;
+      maxLng = marker.position.longitude > maxLng ? marker.position.longitude : maxLng;
+    }
+    
+    // Ajouter un peu de padding
+    final paddingValue = 0.02;
+    minLat -= paddingValue;
+    maxLat += paddingValue;
+    minLng -= paddingValue;
+    maxLng += paddingValue;
+    
+    // Créer les limites et ajuster la caméra
+    final bounds = LatLngBounds(
+      southwest: LatLng(minLat, minLng),
+      northeast: LatLng(maxLat, maxLng),
+    );
+    
+    final cameraUpdate = CameraUpdate.newLatLngBounds(bounds, 50.0);
+    await controller.animateCamera(cameraUpdate);
+  }
+  
+  void _showClientDetailBottomSheet(UserModel client, double lat, double lng) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (context) => DraggableScrollableSheet(
-        initialChildSize: 0.5,
-        minChildSize: 0.3,
-        maxChildSize: 0.9,
-        expand: false,
-        builder: (context, scrollController) {
-          return SingleChildScrollView(
-            controller: scrollController,
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Poignée de glissement
-                  Center(
-                    child: Container(
-                      width: 40,
-                      height: 5,
-                      decoration: BoxDecoration(
-                        color: Colors.grey[300],
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  
-                  // En-tête avec statut
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        AppTranslations.text(context, 'service_request'),
-                        style: const TextStyle(
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 6,
-                        ),
+      builder: (context) {
+        return DraggableScrollableSheet(
+          initialChildSize: 0.4,
+          minChildSize: 0.3,
+          maxChildSize: 0.8,
+          expand: false,
+          builder: (context, scrollController) {
+            return SingleChildScrollView(
+              controller: scrollController,
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Indicateur de drag
+                    Center(
+                      child: Container(
+                        width: 40,
+                        height: 5,
                         decoration: BoxDecoration(
-                          color: _getStatusColor(request.status),
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        child: Text(
-                          _getStatusLabel(context, request.status),
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  
-                  // Date de la demande
-                  Text(
-                    '${AppTranslations.text(context, 'requested_on')}: ${_formatDate(request.requestDate)}',
-                    style: TextStyle(
-                      color: Colors.grey[600],
-                      fontStyle: FontStyle.italic,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  
-                  // Description
-                  Text(
-                    AppTranslations.text(context, 'description'),
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    request.description,
-                    style: const TextStyle(fontSize: 16),
-                  ),
-                  const SizedBox(height: 16),
-                  
-                  // Date préférée
-                  Text(
-                    AppTranslations.text(context, 'preferred_date_time'),
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    _formatDateTime(request.preferredDate),
-                    style: const TextStyle(fontSize: 16),
-                  ),
-                  const SizedBox(height: 16),
-                  
-                  // Adresse
-                  Text(
-                    AppTranslations.text(context, 'location'),
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      const Icon(Icons.location_on, color: Colors.red),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          request.address,
-                          style: const TextStyle(fontSize: 16),
-                        ),
-                      ),
-                    ],
-                  ),
-                  
-                  if (_currentPosition != null) ...[
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        const Icon(Icons.directions, color: Colors.blue),
-                        const SizedBox(width: 8),
-                        Text(
-                          '${_locationService.calculateDistance(
-                            _currentPosition!.latitude,
-                            _currentPosition!.longitude,
-                            request.latitude,
-                            request.longitude,
-                          ).toStringAsFixed(1)} km ${AppTranslations.text(context, 'from_you')}',
-                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                        ),
-                      ],
-                    ),
-                  ],
-                  
-                  const SizedBox(height: 32),
-                  
-                  // Boutons d'action
-                  if (request.status == 'pending') ...[
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton.icon(
-                        onPressed: () => _acceptRequest(request),
-                        icon: const Icon(Icons.check),
-                        label: Text(AppTranslations.text(context, 'accept_request')),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.green,
-                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          color: Colors.grey[300],
+                          borderRadius: BorderRadius.circular(10),
                         ),
                       ),
                     ),
                     const SizedBox(height: 16),
-                  ],
-                  
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton.icon(
-                      onPressed: () => _navigateToRequestDetails(request),
-                      icon: const Icon(Icons.info),
-                      label: Text(AppTranslations.text(context, 'view_details')),
-                      style: ElevatedButton.styleFrom(
+                    
+                    // Info du client
+                    Row(
+                      children: [
+                        CircleAvatar(
+                          radius: 30,
+                          backgroundColor: Theme.of(context).primaryColor.withOpacity(0.1),
+                          child: Text(
+                            client.name.isNotEmpty ? client.initials : '?',
+                            style: TextStyle(
+                              color: Theme.of(context).primaryColor,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 18,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                client.name.isNotEmpty ? client.name : 'Client sans nom',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 18,
+                                ),
+                              ),
+                              Text(
+                                client.email,
+                                style: TextStyle(
+                                  color: Colors.grey[600],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 24),
+                    
+                    // Actions
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            onPressed: () => _launchMaps(lat, lng, client.name),
+                            icon: const Icon(Icons.directions),
+                            label: const Text('Itinéraire'),
+                            style: OutlinedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: ElevatedButton.icon(
+                            onPressed: () {
+                              // Naviguer vers l'écran de détails du client
+                              Navigator.pop(context);
+                              Navigator.pushNamed(
+                                context,
+                                '/vendor/client-detail',
+                                arguments: client,
+                              );
+                            },
+                            icon: const Icon(Icons.person),
+                            label: const Text('Voir détails'),
+                            style: ElevatedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    
+                    // Plus d'actions
+                    OutlinedButton.icon(
+                      onPressed: () => _makePhoneCall('+01234567890'), // Remplacer par le numéro du client
+                      icon: const Icon(Icons.phone),
+                      label: const Text('Appeler le client'),
+                      style: OutlinedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 12),
+                        minimumSize: const Size(double.infinity, 0),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
-          );
-        },
-      ),
+            );
+          },
+        );
+      },
     );
   }
   
-  String _formatDate(DateTime date) {
-    return '${date.day}/${date.month}/${date.year}';
-  }
-  
-  String _formatDateTime(DateTime date) {
-    return '${date.day}/${date.month}/${date.year} - ${date.hour}:${date.minute.toString().padLeft(2, '0')}';
-  }
-  
-  Color _getStatusColor(String status) {
-    switch (status) {
-      case 'pending':
-        return Colors.orange;
-      case 'accepted':
-        return Colors.green;
-      case 'completed':
-        return Colors.blue;
-      case 'cancelled':
-        return Colors.red;
-      default:
-        return Colors.grey;
+  Future<void> _launchMaps(double lat, double lng, String label) async {
+    final url = 'https://www.google.com/maps/dir/?api=1&destination=$lat,$lng&destination_place_id=$label';
+    final uri = Uri.parse(url);
+    
+    try {
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Impossible d\'ouvrir Google Maps')),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Erreur: $e')),
+      );
     }
   }
   
-  String _getStatusLabel(BuildContext context, String status) {
-    switch (status) {
-      case 'pending':
-        return AppTranslations.text(context, 'pending');
-      case 'accepted':
-        return AppTranslations.text(context, 'accepted');
-      case 'completed':
-        return AppTranslations.text(context, 'completed');
-      case 'cancelled':
-        return AppTranslations.text(context, 'cancelled');
-      default:
-        return status;
+  Future<void> _makePhoneCall(String phoneNumber) async {
+    final url = 'tel:$phoneNumber';
+    final uri = Uri.parse(url);
+    
+    try {
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri);
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Impossible de passer l\'appel')),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Erreur: $e')),
+      );
     }
   }
   
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: CustomAppBar(
-        title: AppTranslations.text(context, 'client_requests'),
+      appBar: AppBar(
+        title: const Text('Carte des clients'),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
-            onPressed: _refreshData,
-            tooltip: AppTranslations.text(context, 'refresh'),
-          ),
-          IconButton(
-            icon: const Icon(Icons.list),
-            onPressed: () {
-              Navigator.pushNamed(context, '/vendor/requests-list');
-            },
-            tooltip: AppTranslations.text(context, 'list_view'),
+            onPressed: _loadClients,
+            tooltip: 'Actualiser',
           ),
         ],
       ),
       body: _isLoading
-          ? Center(
-              child: LoadingIndicator(
-                message: AppTranslations.text(context, 'loading_map'),
-                animationType: AnimationType.bounce,
-                color: Theme.of(context).primaryColor,
-              ),
-            )
-          : Stack(
-              children: [
-                GoogleMap(
-                  mapType: MapType.normal,
-                  initialCameraPosition: _initialCameraPosition,
-                  markers: _markers.values.toSet(),
-                  myLocationEnabled: true,
-                  myLocationButtonEnabled: false,
-                  onMapCreated: (GoogleMapController controller) {
-                    _controller.complete(controller);
-                  },
-                  zoomControlsEnabled: false,
-                ),
-                
-                // Indicateur de chargement pendant le rafraîchissement
-                if (_isRefreshing)
-                  Positioned(
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    child: LinearProgressIndicator(
-                      backgroundColor: Colors.transparent,
-                      color: Theme.of(context).primaryColor,
-                    ),
-                  ),
-                
-                // Filtres
-                Positioned(
-                  top: 16,
-                  left: 16,
-                  right: 16,
-                  child: Card(
-                    elevation: 4,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 8,
+          ? const Center(child: CircularProgressIndicator())
+          : _errorMessage.isNotEmpty
+              ? Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(
+                        Icons.error_outline,
+                        size: 64,
+                        color: Colors.red,
                       ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            AppTranslations.text(context, 'filters'),
-                            style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
+                      const SizedBox(height: 16),
+                      Text(
+                        'Erreur: $_errorMessage',
+                        style: const TextStyle(color: Colors.red),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 16),
+                      ElevatedButton(
+                        onPressed: _initialize,
+                        child: const Text('Réessayer'),
+                      ),
+                    ],
+                  ),
+                )
+              : Stack(
+                  children: [
+                    GoogleMap(
+                      mapType: MapType.normal,
+                      initialCameraPosition: _currentPosition != null
+                          ? CameraPosition(
+                              target: LatLng(
+                                _currentPosition!.latitude,
+                                _currentPosition!.longitude,
+                              ),
+                              zoom: 12,
+                            )
+                          : const CameraPosition(
+                              target: LatLng(0, 0),
+                              zoom: 2,
                             ),
-                          ),
-                          const SizedBox(height: 8),
-                          Row(
-                            children: [
-                              // Filtre par statut
-                              Expanded(
-                                child: DropdownButtonFormField<String>(
-                                  decoration: InputDecoration(
-                                    labelText: AppTranslations.text(context, 'status'),
-                                    isDense: true,
-                                    contentPadding: const EdgeInsets.symmetric(
-                                      horizontal: 12,
-                                      vertical: 8,
-                                    ),
-                                    border: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                  ),
-                                  value: _selectedStatus,
-                                  items: [
-                                    DropdownMenuItem(
-                                      value: 'all',
-                                      child: Text(AppTranslations.text(context, 'all')),
-                                    ),
-                                    DropdownMenuItem(
-                                      value: 'pending',
-                                      child: Text(AppTranslations.text(context, 'pending')),
-                                    ),
-                                    DropdownMenuItem(
-                                      value: 'accepted',
-                                      child: Text(AppTranslations.text(context, 'accepted')),
-                                    ),
-                                    DropdownMenuItem(
-                                      value: 'completed',
-                                      child: Text(AppTranslations.text(context, 'completed')),
-                                    ),
-                                    DropdownMenuItem(
-                                      value: 'cancelled',
-                                      child: Text(AppTranslations.text(context, 'cancelled')),
-                                    ),
-                                  ],
-                                  onChanged: (value) {
-                                    if (value != null) {
-                                      setState(() {
-                                        _selectedStatus = value;
-                                      });
-                                      _applyFilters();
-                                    }
-                                  },
+                      myLocationEnabled: true,
+                      myLocationButtonEnabled: false,
+                      markers: Set<Marker>.of(_markers.values),
+                      onMapCreated: (GoogleMapController controller) {
+                        _controller.complete(controller);
+                        if (_currentPosition != null) {
+                          controller.animateCamera(
+                            CameraUpdate.newCameraPosition(
+                              CameraPosition(
+                                target: LatLng(
+                                  _currentPosition!.latitude,
+                                  _currentPosition!.longitude,
                                 ),
+                                zoom: 12,
                               ),
-                              const SizedBox(width: 16),
-                              
-                              // Filtre par distance
-                              Expanded(
-                                child: SwitchListTile(
-                                  title: Text(
-                                    AppTranslations.text(context, 'nearby_only'),
-                                    style: const TextStyle(fontSize: 14),
-                                  ),
-                                  value: _showOnlyNearby,
-                                  onChanged: (value) {
-                                    setState(() {
-                                      _showOnlyNearby = value;
-                                    });
-                                    if (value && _currentPosition == null) {
-                                      _getCurrentLocation();
-                                    } else {
-                                      _applyFilters();
-                                    }
-                                  },
-                                  dense: true,
-                                  contentPadding: EdgeInsets.zero,
-                                ),
-                              ),
-                            ],
-                          ),
-                          if (_showOnlyNearby) ...[
-                            const SizedBox(height: 8),
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: Text(
-                                    '${AppTranslations.text(context, 'max_distance')}: ${_maxDistance.toStringAsFixed(1)} km',
-                                  ),
-                                ),
-                                Expanded(
-                                  flex: 2,
-                                  child: Slider(
-                                    value: _maxDistance,
-                                    min: 1.0,
-                                    max: 50.0,
-                                    divisions: 49,
-                                    label: '${_maxDistance.toStringAsFixed(1)} km',
-                                    onChanged: (value) {
-                                      setState(() {
-                                        _maxDistance = value;
-                                      });
-                                    },
-                                    onChangeEnd: (value) {
-                                      _applyFilters();
-                                    },
-                                  ),
-                                ),
-                              ],
+                            ),
+                          );
+                        }
+                        
+                        // Afficher tous les marqueurs
+                        if (_markers.isNotEmpty) {
+                          _fitBoundsToAllMarkers();
+                        }
+                      },
+                    ),
+                    
+                    // Compteur de clients
+                    Positioned(
+                      top: 16,
+                      left: 16,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(20),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.1),
+                              blurRadius: 4,
+                              offset: const Offset(0, 2),
                             ),
                           ],
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-                
-                // Compteur de résultats
-                Positioned(
-                  bottom: 96,
-                  right: 16,
-                  child: Card(
-                    elevation: 4,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 8,
-                      ),
-                      child: Text(
-                        '${_filteredRequests.length} ${AppTranslations.text(context, 'requests')}',
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.people,
+                              size: 16,
+                              color: Theme.of(context).primaryColor,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              '${_clients.length} client${_clients.length > 1 ? 's' : ''}',
+                              style: const TextStyle(fontWeight: FontWeight.bold),
+                            ),
+                          ],
                         ),
                       ),
                     ),
-                  ),
+                    
+                    // Boutons flottants
+                    Positioned(
+                      bottom: 16,
+                      right: 16,
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          FloatingActionButton(
+                            heroTag: 'btn1',
+                            onPressed: _getCurrentLocation,
+                            tooltip: 'Ma position',
+                            child: const Icon(Icons.my_location),
+                          ),
+                          const SizedBox(height: 16),
+                          FloatingActionButton(
+                            heroTag: 'btn2',
+                            onPressed: _fitBoundsToAllMarkers,
+                            tooltip: 'Voir tous les clients',
+                            child: const Icon(Icons.zoom_out_map),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
-                
-                // Bouton pour centrer sur ma position
-                Positioned(
-                  bottom: 32,
-                  right: 16,
-                  child: FloatingActionButton(
-                    onPressed: _getCurrentLocation,
-                    tooltip: AppTranslations.text(context, 'my_location'),
-                    child: const Icon(Icons.my_location),
-                  ),
-                ),
-              ],
+      floatingActionButton: _isLoading || _errorMessage.isNotEmpty
+          ? null
+          : FloatingActionButton.extended(
+              onPressed: () {
+                // Naviguer vers la liste des clients
+                Navigator.pushNamed(context, '/vendor/clients');
+              },
+              icon: const Icon(Icons.list),
+              label: const Text('Liste des clients'),
             ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.startFloat,
     );
   }
 }

@@ -16,9 +16,9 @@ class ProfileScreen extends StatefulWidget {
   final bool showAppBar;
   
   const ProfileScreen({
-    Key? key, 
+    super.key, 
     this.showAppBar = true
-  }) : super(key: key);
+  });
 
   @override
   State<ProfileScreen> createState() => _ProfileScreenState();
@@ -38,7 +38,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   ];
   
   // Langue actuellement sélectionnée
-  String _currentLanguage = 'fr';
+  final String _currentLanguage = 'fr';
   
   @override
   void initState() {

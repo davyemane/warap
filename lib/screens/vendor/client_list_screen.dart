@@ -8,7 +8,7 @@ import '../../widgets/common/custom_app_bar.dart';
 import '../../widgets/common/loading_indicator.dart';
 
 class ClientListScreen extends StatefulWidget {
-  const ClientListScreen({Key? key}) : super(key: key);
+  const ClientListScreen({super.key});
 
   @override
   State<ClientListScreen> createState() => _ClientListScreenState();
@@ -88,6 +88,8 @@ class _ClientListScreenState extends State<ClientListScreen> {
       builder: (context) => _buildClientDetailsSheet(client),
     );
   }
+
+  
   
   Widget _buildClientDetailsSheet(UserModel client) {
     return DraggableScrollableSheet(
@@ -391,6 +393,15 @@ class _ClientListScreenState extends State<ClientListScreen> {
           ),
         ],
       ),
+    
+        floatingActionButton: FloatingActionButton.extended(
+      onPressed: () {
+        Navigator.pushNamed(context, '/vendor/client-map');
+      },
+      icon: const Icon(Icons.map),
+      label: const Text('Voir sur la carte'),
+    ),
+  
     );
   }
 }

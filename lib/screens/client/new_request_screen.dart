@@ -11,7 +11,7 @@ import 'request_service_screen.dart';
 // Cette classe sert de wrapper pour RequestServiceScreen
 // Elle permet à l'utilisateur de sélectionner un commerce avant de passer à l'écran de demande
 class NewRequestScreen extends StatefulWidget {
-  const NewRequestScreen({Key? key}) : super(key: key);
+  const NewRequestScreen({super.key});
 
   @override
   State<NewRequestScreen> createState() => _NewRequestScreenState();

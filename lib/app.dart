@@ -6,7 +6,7 @@ import 'screens/vendor/vendor_main_screen.dart';
 import 'services/auth_service.dart';
 
 class MyApp extends StatelessWidget {
-  const MyApp({Key? key}) : super(key: key);
+  const MyApp({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -14,12 +14,12 @@ class MyApp extends StatelessWidget {
       title: 'Warap',
       debugShowCheckedModeBanner: false, // Supprime le bandeau "Debug"
       theme: ThemeData(
-        primarySwatch: Colors.blue,
+        primarySwatch: Colors.deepOrange,
         visualDensity: VisualDensity.adaptivePlatformDensity,
         appBarTheme: const AppBarTheme(
           elevation: 0,
           centerTitle: true,
-          backgroundColor: Colors.blue,
+          backgroundColor: Colors.deepOrange,
           foregroundColor: Colors.white,
         ),
         elevatedButtonTheme: ElevatedButtonThemeData(
@@ -117,7 +117,7 @@ class MyApp extends StatelessWidget {
       builder: (context, child) {
         return MediaQuery(
           // Empêche le redimensionnement des interfaces quand le clavier apparaît
-          data: MediaQuery.of(context).copyWith(textScaleFactor: 1.0),
+          data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(1.0)),
           child: child!,
         );
       },

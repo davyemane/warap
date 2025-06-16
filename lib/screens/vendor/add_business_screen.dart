@@ -8,7 +8,7 @@ import '../../services/location_service.dart';
 import '../../l10n/translations.dart';
 
 class AddBusinessScreen extends StatefulWidget {
-  const AddBusinessScreen({Key? key}) : super(key: key);
+  const AddBusinessScreen({super.key});
 
   @override
   State<AddBusinessScreen> createState() => _AddBusinessScreenState();

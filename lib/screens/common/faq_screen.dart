@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../../l10n/translations.dart';
 
 class FAQScreen extends StatelessWidget {
-  const FAQScreen({Key? key}) : super(key: key);
+  const FAQScreen({super.key});
 
   @override
   Widget build(BuildContext context) {

@@ -5,41 +5,84 @@ import 'package:share_plus/share_plus.dart';
 import '../../models/business_model.dart';
 import '../../widgets/common/custom_app_bar.dart';
 import '../../l10n/translations.dart';
-import '../../services/error_handler.dart'; // Ajout de l'import
+import '../../services/error_handler.dart';
 // Imports à ajouter
 import '../../widgets/client/product_card.dart';
 import '../../services/product_service.dart';
 import '../../models/product_model.dart';
 
-class BusinessDetailsScreen extends StatelessWidget {
+class BusinessDetailsScreen extends StatefulWidget {
   final BusinessModel business;
+
+  const BusinessDetailsScreen({super.key, required this.business});
+
+  @override
+  State<BusinessDetailsScreen> createState() => _BusinessDetailsScreenState();
+}
+
+class _BusinessDetailsScreenState extends State<BusinessDetailsScreen> {
   final ProductService _productService = ProductService();
-  final List<ProductModel> _products = [];
-  final bool _isLoading = true;
-  BusinessDetailsScreen({Key? key, required this.business}) : super(key: key);
+  List<ProductModel> _products = [];
+  bool _isLoading = true;
 
+  @override
+  void initState() {
+    super.initState();
+    _loadProducts();
+  }
 
+  Future<void> _loadProducts() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final products =
+          await _productService.getBusinessProducts(widget.business.id);
+
+      setState(() {
+        _products = products;
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+      });
+
+      if (mounted) {
+        ErrorHandler.showErrorSnackBar(
+          context,
+          e,
+          fallbackMessage:
+              AppTranslations.text(context, 'error_loading_products'),
+          onRetry: _loadProducts,
+        );
+      }
+    }
+  }
 
   // Fonction de partage
   void _shareBusiness(BuildContext context) {
     final String message = """
-${business.name}
-${business.businessType == 'fixe' ? AppTranslations.text(context, 'fixed_business') : AppTranslations.text(context, 'mobile_business')}
-${business.isOpenNow() ? AppTranslations.text(context, 'open') : AppTranslations.text(context, 'closed')} - ${AppTranslations.text(context, 'opening_hours')}: ${business.openingTime} - ${business.closingTime}
-${business.address.isNotEmpty ? '${AppTranslations.text(context, 'address')}: ${business.address}' : ''}
-${business.description.isNotEmpty ? '\n${business.description}' : ''}
+${widget.business.name}
+${widget.business.businessType == 'fixe' ? AppTranslations.text(context, 'fixed_business') : AppTranslations.text(context, 'mobile_business')}
+${widget.business.isOpenNow() ? AppTranslations.text(context, 'open') : AppTranslations.text(context, 'closed')} - ${AppTranslations.text(context, 'opening_hours')}: ${widget.business.openingTime} - ${widget.business.closingTime}
+${widget.business.address.isNotEmpty ? '${AppTranslations.text(context, 'address')}: ${widget.business.address}' : ''}
+${widget.business.description.isNotEmpty ? '\n${widget.business.description}' : ''}
 
 ${AppTranslations.text(context, 'discover_app')}
 """;
 
-    Share.share(message, subject: AppTranslations.textWithParams(context, 'discover_business', [business.name]));
+    Share.share(message,
+        subject: AppTranslations.textWithParams(
+            context, 'discover_business', [widget.business.name]));
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: CustomAppBar(
-        title: business.name,
+        title: widget.business.name,
         showBackButton: true,
         actions: [
           // Bouton de favoris
@@ -47,8 +90,9 @@ ${AppTranslations.text(context, 'discover_app')}
             icon: const Icon(Icons.favorite_border),
             onPressed: () {
               ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text(AppTranslations.textWithParams(
-                  context, 'added_to_favorites', [business.name]))),
+                SnackBar(
+                    content: Text(AppTranslations.textWithParams(context,
+                        'added_to_favorites', [widget.business.name]))),
               );
             },
           ),
@@ -71,78 +115,82 @@ ${AppTranslations.text(context, 'discover_app')}
               children: [
                 Chip(
                   label: Text(
-                    business.businessType == 'fixe'
+                    widget.business.businessType == 'fixe'
                         ? AppTranslations.text(context, 'fixed_business')
                         : AppTranslations.text(context, 'mobile_business'),
                   ),
-                  backgroundColor: business.businessType == 'fixe' 
-                      ? Colors.blue.shade100 
+                  backgroundColor: widget.business.businessType == 'fixe'
+                      ? Colors.blue.shade100
                       : Colors.green.shade100,
                 ),
                 Chip(
                   label: Text(
-                    business.isOpenNow()
+                    widget.business.isOpenNow()
                         ? AppTranslations.text(context, 'open')
                         : AppTranslations.text(context, 'closed'),
                   ),
-                  backgroundColor: business.isOpenNow() 
-                      ? Colors.green.shade100 
+                  backgroundColor: widget.business.isOpenNow()
+                      ? Colors.green.shade100
                       : Colors.red.shade100,
                 ),
               ],
             ),
             const SizedBox(height: 16),
-            
+
             // Description
             Text(
               AppTranslations.text(context, 'description'),
               style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
-            Text(business.description),
+            Text(widget.business.description),
             const SizedBox(height: 16),
-            
+
             // Heures d'ouverture
             Text(
               AppTranslations.text(context, 'opening_hours'),
               style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
-            Text('${AppTranslations.text(context, 'from')} ${business.openingTime} ${AppTranslations.text(context, 'to')} ${business.closingTime}'),
+            Text(
+                '${AppTranslations.text(context, 'from')} ${widget.business.openingTime} ${AppTranslations.text(context, 'to')} ${widget.business.closingTime}'),
             const SizedBox(height: 16),
-            
+
             // Adresse
-            if (business.address.isNotEmpty) ...[
+            if (widget.business.address.isNotEmpty) ...[
               Text(
                 AppTranslations.text(context, 'address'),
-                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                style:
+                    const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 8),
-              Text(business.address),
+              Text(widget.business.address),
               const SizedBox(height: 8),
               TextButton.icon(
                 icon: const Icon(Icons.map),
                 label: Text(AppTranslations.text(context, 'open_in_maps')),
-                onPressed: () => _openMap(context, business.latitude, business.longitude),
+                onPressed: () => _openMap(context, widget.business.latitude,
+                    widget.business.longitude),
               ),
               const SizedBox(height: 16),
             ],
-            
+
             // Téléphone
-            if (business.phone.isNotEmpty) ...[
+            if (widget.business.phone.isNotEmpty) ...[
               Text(
                 AppTranslations.text(context, 'contact'),
-                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                style:
+                    const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 8),
               Row(
                 children: [
-                  Text(business.phone),
+                  Text(widget.business.phone),
                   const SizedBox(width: 16),
                   TextButton.icon(
                     icon: const Icon(Icons.phone),
                     label: Text(AppTranslations.text(context, 'call')),
-                    onPressed: () => _callPhone(context, business.phone),
+                    onPressed: () => _callPhone(context, widget.business.phone),
                   ),
                 ],
               ),
@@ -157,7 +205,8 @@ ${AppTranslations.text(context, 'discover_app')}
                   icon: Icons.directions,
                   label: AppTranslations.text(context, 'directions'),
                   color: Colors.blue,
-                  onTap: () => _openMap(context, business.latitude, business.longitude),
+                  onTap: () => _openMap(context, widget.business.latitude,
+                      widget.business.longitude),
                 ),
                 _ActionButton(
                   icon: Icons.favorite_border,
@@ -165,8 +214,9 @@ ${AppTranslations.text(context, 'discover_app')}
                   color: Colors.red,
                   onTap: () {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text(AppTranslations.textWithParams(
-                        context, 'added_to_favorites', [business.name]))),
+                      SnackBar(
+                          content: Text(AppTranslations.textWithParams(context,
+                              'added_to_favorites', [widget.business.name]))),
                     );
                   },
                 ),
@@ -178,17 +228,63 @@ ${AppTranslations.text(context, 'discover_app')}
                 ),
               ],
             ),
+
+            // Products section
+            const SizedBox(height: 24),
+            Text(
+              AppTranslations.text(context, 'products'),
+              style: const TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 16),
+            _isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : _products.isEmpty
+                    ? Center(
+                        child: Text(
+                          AppTranslations.text(
+                              context, 'no_products_available'),
+                          style: TextStyle(color: Colors.grey[600]),
+                        ),
+                      )
+                    : GridView.builder(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        gridDelegate:
+                            const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 2,
+                          childAspectRatio: 0.75,
+                          crossAxisSpacing: 10,
+                          mainAxisSpacing: 10,
+                        ),
+                        itemCount: _products.length,
+                        itemBuilder: (context, index) {
+                          return ProductCard(
+                            product: _products[index],
+                            business: widget.business,
+                            onTap: () {
+                              Navigator.pushNamed(
+                                context,
+                                '/client/product-detail',
+                                arguments: _products[index],
+                              );
+                            },
+                          );
+                        },
+                      ),
           ],
         ),
       ),
     );
   }
 
+  Future<void> _openMap(
+      BuildContext context, double latitude, double longitude) async {
+    final Uri url = Uri.parse(
+        'https://www.google.com/maps/search/?api=1&query=$latitude,$longitude');
 
-
-  Future<void> _openMap(BuildContext context, double latitude, double longitude) async {
-    final Uri url = Uri.parse('https://www.google.com/maps/search/?api=1&query=$latitude,$longitude');
-    
     try {
       if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
         throw Exception('Could not launch $url');
@@ -205,7 +301,7 @@ ${AppTranslations.text(context, 'discover_app')}
 
   Future<void> _callPhone(BuildContext context, String phone) async {
     final Uri url = Uri.parse('tel:$phone');
-    
+
     try {
       if (!await launchUrl(url)) {
         throw Exception('Could not launch $url');

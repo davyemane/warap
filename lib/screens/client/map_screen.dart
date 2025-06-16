@@ -21,7 +21,7 @@ import 'request_service_history_screen.dart';
 class ClientMapScreen extends StatefulWidget {
   final bool showAppBar;
 
-  const ClientMapScreen({Key? key, this.showAppBar = true}) : super(key: key);
+  const ClientMapScreen({super.key, this.showAppBar = true});
 
   @override
   State<ClientMapScreen> createState() => _ClientMapScreenState();

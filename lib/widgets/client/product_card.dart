@@ -12,18 +12,19 @@ class ProductCard extends StatefulWidget {
   final ProductModel product;
   final BusinessModel business;
   final VoidCallback? onAddedToCart;
-
+  final VoidCallback onTap;
+  
   const ProductCard({
-    Key? key,
+    super.key,
     required this.product,
     required this.business,
     this.onAddedToCart,
-  }) : super(key: key);
-
+    required this.onTap,
+  });
+  
   @override
   State<ProductCard> createState() => _ProductCardState();
 }
-
 class _ProductCardState extends State<ProductCard> {
   final CartService _cartService = CartService();
   bool _isAddingToCart = false;

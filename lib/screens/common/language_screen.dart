@@ -4,7 +4,7 @@ import '../../providers/locale_provider.dart';
 import '../../l10n/translations.dart';
 
 class LanguageScreen extends StatelessWidget {
-  const LanguageScreen({Key? key}) : super(key: key);
+  const LanguageScreen({super.key});
 
   void _changeLanguage(BuildContext context, String languageCode) {
     // Changer la langue en utilisant le provider

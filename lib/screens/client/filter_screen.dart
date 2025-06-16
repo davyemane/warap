@@ -8,10 +8,10 @@ class FilterScreen extends StatefulWidget {
   final bool showOpenOnly;
   
   const FilterScreen({
-    Key? key,
+    super.key,
     this.selectedType,
     this.showOpenOnly = false,
-  }) : super(key: key);
+  });
 
   @override
   State<FilterScreen> createState() => _FilterScreenState();

@@ -6,7 +6,7 @@ import '../../services/auth_service.dart';
 import '../../services/vendor_settings_service.dart';
 
 class VendorSettingsScreen extends StatefulWidget {
-  const VendorSettingsScreen({Key? key}) : super(key: key);
+  const VendorSettingsScreen({super.key});
 
   @override
   State<VendorSettingsScreen> createState() => _VendorSettingsScreenState();
@@ -136,6 +136,15 @@ class _VendorSettingsScreenState extends State<VendorSettingsScreen> {
               }).toList(),
             ),
           ),
+          // Dans vendor_settings_screen.dart, ajouter à la liste des paramètres
+ListTile(
+  leading: const Icon(Icons.bug_report),
+  title: const Text('Diagnostic Supabase'),
+  subtitle: const Text('Tester la connexion et les tables'),
+  onTap: () {
+    Navigator.pushNamed(context, '/vendor/diagnostic');
+  },
+),
 
           const Divider(),
 

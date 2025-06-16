@@ -12,9 +12,9 @@ class BusinessManagementScreen extends StatefulWidget {
   final bool showAppBar;
   
   const BusinessManagementScreen({
-    Key? key, 
+    super.key, 
     this.showAppBar = true
-  }) : super(key: key);
+  });
 
   @override
   State<BusinessManagementScreen> createState() => _BusinessManagementScreenState();
@@ -190,11 +190,11 @@ class BusinessListItem extends StatelessWidget {
   final VoidCallback onDelete;
   
   const BusinessListItem({
-    Key? key,
+    super.key,
     required this.business,
     required this.onEdit,
     required this.onDelete,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

@@ -15,10 +15,10 @@ class CheckoutScreen extends StatefulWidget {
   final BusinessModel business;
   
   const CheckoutScreen({
-    Key? key,
+    super.key,
     required this.cartItems,
     required this.business,
-  }) : super(key: key);
+  });
 
   @override
   State<CheckoutScreen> createState() => _CheckoutScreenState();

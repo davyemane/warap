@@ -12,7 +12,7 @@ import '../../widgets/common/loading_indicator.dart';
 import '../../widgets/common/status_badge.dart';
 
 class NewOrdersScreen extends StatefulWidget {
-  const NewOrdersScreen({Key? key}) : super(key: key);
+  const NewOrdersScreen({super.key});
 
   @override
   State<NewOrdersScreen> createState() => _NewOrdersScreenState();
@@ -438,7 +438,7 @@ class _NewOrdersScreenState extends State<NewOrdersScreen> with SingleTickerProv
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      '${order.clientId}', // Idéalement, vous obtiendriez le nom du client ici
+                      order.clientId, // Idéalement, vous obtiendriez le nom du client ici
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(

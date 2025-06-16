@@ -12,9 +12,9 @@ class StatisticsScreen extends StatefulWidget {
   final bool showAppBar;
   
   const StatisticsScreen({
-    Key? key, 
+    super.key, 
     this.showAppBar = true
-  }) : super(key: key);
+  });
 
   @override
   State<StatisticsScreen> createState() => _StatisticsScreenState();

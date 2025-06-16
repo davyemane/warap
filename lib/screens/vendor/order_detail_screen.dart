@@ -8,67 +8,74 @@ import '../../utils/theme.dart';
 import '../../widgets/common/custom_app_bar.dart';
 import '../../widgets/common/loading_indicator.dart';
 
-class OrderDetailScreen extends StatefulWidget {
+class OrderDetailScreenVendor extends StatefulWidget {
   final String orderId;
-  
-  const OrderDetailScreen({
-    Key? key,
+
+  const OrderDetailScreenVendor({
+    super.key,
     required this.orderId,
-  }) : super(key: key);
+  });
 
   @override
-  State<OrderDetailScreen> createState() => _OrderDetailScreenState();
+  State<OrderDetailScreenVendor> createState() => _OrderDetailScreenVendorState();
 }
 
-class _OrderDetailScreenState extends State<OrderDetailScreen> {
+class _OrderDetailScreenVendorState extends State<OrderDetailScreenVendor> {
   final OrderService _orderService = OrderService();
-  
+
   OrderModel? _order;
   bool _isLoading = true;
   bool _isUpdating = false;
-  
+  String _error = ''; // Ajoutez cette ligne pour déclarer la variable _error
+
   @override
   void initState() {
     super.initState();
     _loadOrderDetails();
   }
-  
+
+// Dans order_detail_screen.dart - Méthode _loadOrderDetails
   Future<void> _loadOrderDetails() async {
     setState(() {
       _isLoading = true;
     });
-    
+
     try {
+      print('🔍 Chargement des détails de la commande ID: ${widget.orderId}');
+
       final order = await _orderService.getOrderById(widget.orderId);
-      
-      setState(() {
-        _order = order;
-        _isLoading = false;
-      });
-    } catch (e) {
-      setState(() {
-        _isLoading = false;
-      });
-      
+
       if (mounted) {
-        ErrorHandler.showErrorSnackBar(
-          context, 
-          e,
-          fallbackMessage: AppTranslations.text(context, 'error_loading_order'),
-          onRetry: _loadOrderDetails,
+        setState(() {
+          _order = order;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+          _error = e.toString();
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erreur: $_error'),
+            backgroundColor: Colors.red,
+          ),
         );
       }
     }
   }
-  
+
   Future<void> _updateOrderStatus(String status) async {
     // Confirmer le changement de statut
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         title: Text(AppTranslations.text(context, 'update_status')),
-        content: Text(AppTranslations.textWithParams(
-          context, 'confirm_status_change', [_getStatusLabel(context, status)])),
+        content: Text(AppTranslations.textWithParams(context,
+            'confirm_status_change', [_getStatusLabel(context, status)])),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
@@ -81,44 +88,47 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
         ],
       ),
     );
-    
+
     if (confirm != true) return;
-    
+
     setState(() {
       _isUpdating = true;
     });
-    
+
     try {
       await _orderService.updateOrderStatus(widget.orderId, status);
       await _loadOrderDetails();
-      
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(AppTranslations.text(context, 'status_updated'))),
+          SnackBar(
+              content: Text(AppTranslations.text(context, 'status_updated'))),
         );
       }
     } catch (e) {
       setState(() {
         _isUpdating = false;
       });
-      
+
       if (mounted) {
         ErrorHandler.showErrorSnackBar(
-          context, 
+          context,
           e,
-          fallbackMessage: AppTranslations.text(context, 'error_updating_status'),
+          fallbackMessage:
+              AppTranslations.text(context, 'error_updating_status'),
           onRetry: () => _updateOrderStatus(status),
         );
       }
     }
   }
-  
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: CustomAppBar(
-        title: _order != null 
-            ? AppTranslations.textWithParams(context, 'order_number', [_order!.orderNumber])
+        title: _order != null
+            ? AppTranslations.textWithParams(
+                context, 'order_number', [_order!.orderNumber])
             : AppTranslations.text(context, 'order_details'),
         showBackButton: true,
         actions: [
@@ -169,13 +179,16 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Row(
-                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
                                     children: [
                                       Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
                                         children: [
                                           Text(
-                                            AppTranslations.text(context, 'order_date'),
+                                            AppTranslations.text(
+                                                context, 'order_date'),
                                             style: TextStyle(
                                               color: Colors.grey[600],
                                               fontSize: 14,
@@ -194,10 +207,11 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                                     ],
                                   ),
                                   const SizedBox(height: 16),
-                                  
+
                                   // Informations client
                                   Text(
-                                    AppTranslations.text(context, 'client_info'),
+                                    AppTranslations.text(
+                                        context, 'client_info'),
                                     style: const TextStyle(
                                       fontSize: 16,
                                       fontWeight: FontWeight.bold,
@@ -206,10 +220,11 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                                   const SizedBox(height: 8),
                                   Text(_order!.clientId),
                                   const SizedBox(height: 16),
-                                  
+
                                   // Adresse de livraison
                                   Text(
-                                    AppTranslations.text(context, 'delivery_address'),
+                                    AppTranslations.text(
+                                        context, 'delivery_address'),
                                     style: const TextStyle(
                                       fontSize: 16,
                                       fontWeight: FontWeight.bold,
@@ -218,23 +233,25 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                                   const SizedBox(height: 8),
                                   Text(_order!.deliveryAddress),
                                   const SizedBox(height: 16),
-                                  
+
                                   // Méthode de paiement
                                   Text(
-                                    AppTranslations.text(context, 'payment_method'),
+                                    AppTranslations.text(
+                                        context, 'payment_method'),
                                     style: const TextStyle(
                                       fontSize: 16,
                                       fontWeight: FontWeight.bold,
                                     ),
                                   ),
                                   const SizedBox(height: 8),
-                                  Text(_getPaymentMethodName(context, _order!.paymentMethod)),
+                                  Text(_getPaymentMethodName(
+                                      context, _order!.paymentMethod)),
                                 ],
                               ),
                             ),
                           ),
                           const SizedBox(height: 24),
-                          
+
                           // Liste des articles
                           Text(
                             AppTranslations.text(context, 'order_items'),
@@ -253,12 +270,14 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                               shrinkWrap: true,
                               physics: const NeverScrollableScrollPhysics(),
                               itemCount: _order!.items.length,
-                              separatorBuilder: (context, index) => const Divider(height: 1),
+                              separatorBuilder: (context, index) =>
+                                  const Divider(height: 1),
                               itemBuilder: (context, index) {
                                 final item = _order!.items[index];
                                 return ListTile(
                                   title: Text(item.name),
-                                  subtitle: Text('${item.price.toStringAsFixed(2)} € × ${item.quantity}'),
+                                  subtitle: Text(
+                                      '${item.price.toStringAsFixed(2)} € × ${item.quantity}'),
                                   trailing: Text(
                                     '${(item.price * item.quantity).toStringAsFixed(2)} €',
                                     style: const TextStyle(
@@ -270,7 +289,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                             ),
                           ),
                           const SizedBox(height: 24),
-                          
+
                           // Récapitulatif du paiement
                           Text(
                             AppTranslations.text(context, 'payment_summary'),
@@ -290,31 +309,40 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                               child: Column(
                                 children: [
                                   Row(
-                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
                                     children: [
-                                      Text(AppTranslations.text(context, 'subtotal')),
-                                      Text('${_order!.subtotal.toStringAsFixed(2)} €'),
+                                      Text(AppTranslations.text(
+                                          context, 'subtotal')),
+                                      Text(
+                                          '${_order!.subtotal.toStringAsFixed(2)} €'),
                                     ],
                                   ),
                                   const SizedBox(height: 8),
                                   Row(
-                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
                                     children: [
-                                      Text(AppTranslations.text(context, 'tax')),
-                                      Text('${_order!.tax.toStringAsFixed(2)} €'),
+                                      Text(
+                                          AppTranslations.text(context, 'tax')),
+                                      Text(
+                                          '${_order!.tax.toStringAsFixed(2)} €'),
                                     ],
                                   ),
                                   const Divider(height: 24),
                                   Row(
-                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
                                     children: [
                                       Text(
                                         AppTranslations.text(context, 'total'),
-                                        style: const TextStyle(fontWeight: FontWeight.bold),
+                                        style: const TextStyle(
+                                            fontWeight: FontWeight.bold),
                                       ),
                                       Text(
                                         '${_order!.total.toStringAsFixed(2)} €',
-                                        style: const TextStyle(fontWeight: FontWeight.bold),
+                                        style: const TextStyle(
+                                            fontWeight: FontWeight.bold),
                                       ),
                                     ],
                                   ),
@@ -323,31 +351,37 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                             ),
                           ),
                           const SizedBox(height: 32),
-                          
+
                           // Actions selon statut
                           if (_order!.status == 'pending') ...[
                             Row(
                               children: [
                                 Expanded(
                                   child: OutlinedButton.icon(
-                                    onPressed: () => _updateOrderStatus('cancelled'),
+                                    onPressed: () =>
+                                        _updateOrderStatus('cancelled'),
                                     icon: const Icon(Icons.cancel),
-                                    label: Text(AppTranslations.text(context, 'cancel_order')),
+                                    label: Text(AppTranslations.text(
+                                        context, 'cancel_order')),
                                     style: OutlinedButton.styleFrom(
                                       foregroundColor: Colors.red,
-                                      padding: const EdgeInsets.symmetric(vertical: 12),
+                                      padding: const EdgeInsets.symmetric(
+                                          vertical: 12),
                                     ),
                                   ),
                                 ),
                                 const SizedBox(width: 16),
                                 Expanded(
                                   child: ElevatedButton.icon(
-                                    onPressed: () => _updateOrderStatus('processing'),
+                                    onPressed: () =>
+                                        _updateOrderStatus('processing'),
                                     icon: const Icon(Icons.check),
-                                    label: Text(AppTranslations.text(context, 'accept_order')),
+                                    label: Text(AppTranslations.text(
+                                        context, 'accept_order')),
                                     style: ElevatedButton.styleFrom(
                                       backgroundColor: Colors.green,
-                                      padding: const EdgeInsets.symmetric(vertical: 12),
+                                      padding: const EdgeInsets.symmetric(
+                                          vertical: 12),
                                     ),
                                   ),
                                 ),
@@ -357,12 +391,15 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                             SizedBox(
                               width: double.infinity,
                               child: ElevatedButton.icon(
-                                onPressed: () => _updateOrderStatus('completed'),
+                                onPressed: () =>
+                                    _updateOrderStatus('completed'),
                                 icon: const Icon(Icons.done_all),
-                                label: Text(AppTranslations.text(context, 'mark_completed')),
+                                label: Text(AppTranslations.text(
+                                    context, 'mark_completed')),
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: Colors.green,
-                                  padding: const EdgeInsets.symmetric(vertical: 12),
+                                  padding:
+                                      const EdgeInsets.symmetric(vertical: 12),
                                 ),
                               ),
                             ),
@@ -372,11 +409,11 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                     ),
     );
   }
-  
+
   Widget _buildStatusChip(BuildContext context, String status) {
     Color color;
     String label;
-    
+
     switch (status) {
       case 'pending':
         color = AppTheme.pendingColor;
@@ -398,7 +435,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
         color = Colors.grey;
         label = status;
     }
-    
+
     return Container(
       padding: const EdgeInsets.symmetric(
         horizontal: 12,
@@ -417,11 +454,11 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
       ),
     );
   }
-  
+
   String _formatDateTime(DateTime date) {
     return '${date.day}/${date.month}/${date.year} ${date.hour}:${date.minute.toString().padLeft(2, '0')}';
   }
-  
+
   String _getPaymentMethodName(BuildContext context, String method) {
     switch (method) {
       case 'card':
@@ -432,7 +469,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
         return method;
     }
   }
-  
+
   String _getStatusLabel(BuildContext context, String status) {
     switch (status) {
       case 'pending':

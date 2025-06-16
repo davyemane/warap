@@ -10,7 +10,7 @@ import '../../widgets/common/loading_indicator.dart';
 import '../../widgets/common/status_badge.dart'; // Ensure this import is correct and the StatusBadge widget exists in this file.
 
 class RequestServiceHistoryScreen extends StatefulWidget {
-  const RequestServiceHistoryScreen({Key? key}) : super(key: key);
+  const RequestServiceHistoryScreen({super.key});
 
   @override
   State<RequestServiceHistoryScreen> createState() => _RequestServiceHistoryScreenState();
@@ -254,8 +254,8 @@ class _RequestServiceHistoryScreenState extends State<RequestServiceHistoryScree
         onPressed: () {
           Navigator.pushNamed(context, '/client/new-request');
         },
-        child: const Icon(Icons.add),
         tooltip: AppTranslations.text(context, 'new_request'),
+        child: const Icon(Icons.add),
       ),
     );
   }

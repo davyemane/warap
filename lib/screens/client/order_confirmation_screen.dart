@@ -12,9 +12,9 @@ class OrderConfirmationScreen extends StatelessWidget {
   final OrderModel order;
   
   const OrderConfirmationScreen({
-    Key? key,
+    super.key,
     required this.order,
-  }) : super(key: key);
+  });
 
   void _copyOrderNumber(BuildContext context) {
     Clipboard.setData(ClipboardData(text: order.orderNumber));

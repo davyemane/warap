@@ -10,13 +10,13 @@ class StatusBadge extends StatelessWidget {
   final double fontSize;
   
   const StatusBadge({
-    Key? key,
+    super.key,
     required this.status,
     required this.label,
     required this.color,
     this.textColor = Colors.white,
     this.fontSize = 12.0,
-  }) : super(key: key);
+  });
   
   factory StatusBadge.fromStatus(
     BuildContext context,
